@@ -7,6 +7,10 @@ Container {
     grid-size: 3 1;
 }
 
+ListView {
+    background: transparent;
+}
+
 #detail {
     column-span: 2;
 }
