@@ -23,7 +23,7 @@ class Terdo(App):
         ("q", "quit", "Quit"),
     ]
 
-    CSS_PATH = "main.tcss"
+    CSS_PATH = "styles.tcss"
 
     tasks: reactive[list[Task]] = reactive([])
 

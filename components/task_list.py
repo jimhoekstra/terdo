@@ -8,6 +8,7 @@ from models.task import Task
 
 class TaskList(VerticalScroll):
     tasks: reactive[list[Task]] = reactive([])
+    can_focus = False
 
     def compose(self) -> ComposeResult:
         for task in self.tasks:

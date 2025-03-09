@@ -10,7 +10,3 @@ Container {
 #detail {
     column-span: 2;
 }
-
-#task-list-container, #detail {
-    border: round gray;
-}
