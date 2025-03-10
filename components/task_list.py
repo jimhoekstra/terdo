@@ -8,7 +8,7 @@ from models.task import Task
 class TaskList(ListView):
     tasks: reactive[list[Task]] = reactive([])
 
-    BINDINGS = [("k", "cursor_up", "Up"), ("j", "cursor_down", "Down")]
+    BINDINGS = [("j", "cursor_down", "Next"), ("k", "cursor_up", "Previous")]
 
     def compose(self) -> ComposeResult:
         for task in self.tasks:

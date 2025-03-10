@@ -21,7 +21,8 @@ tasks = [
 
 class Terdo(App):
     BINDINGS = [
-        ("q", "quit", "Quit"),
+        ("n", "new", "New"),
+        ("q", "quit", "Quit Terdo"),
     ]
 
     CSS_PATH = "styles.tcss"
@@ -43,8 +44,15 @@ class Terdo(App):
         self.tasks = tasks
         self.note_content = Path.cwd() / "markdown" / "Do groceries.md"
 
+        task_list_component = self.query_one("#task-list", TaskList)
+        task_list_component.focus()
+
     async def action_quit(self) -> None:
         self.exit()
+
+    async def action_new(self) -> None:
+        new_task_component = self.query_one("#new-task", NewTask)
+        new_task_component.focus()
 
     async def watch_tasks(self) -> None:
         task_list = self.query_one("#task-list", TaskList)
