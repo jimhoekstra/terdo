@@ -1,18 +1,19 @@
 from textual.app import ComposeResult
-from textual.widgets import Checkbox
+from textual.widgets import Checkbox, ListView, ListItem
 from textual.reactive import reactive
-from textual.containers import VerticalScroll
 
 from models.task import Task
 
 
-class TaskList(VerticalScroll):
+class TaskList(ListView):
     tasks: reactive[list[Task]] = reactive([])
-    can_focus = False
+
+    BINDINGS = [("k", "cursor_up", "Up"), ("j", "cursor_down", "Down")]
 
     def compose(self) -> ComposeResult:
         for task in self.tasks:
-            yield Checkbox(task.name)
+            yield ListItem(Checkbox(task.name), name=task.name)
 
     async def watch_tasks(self) -> None:
         await self.recompose()
+        self.index = 0
