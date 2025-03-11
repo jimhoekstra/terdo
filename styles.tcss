@@ -21,3 +21,11 @@ Note {
 TaskList {
     background: transparent;
 }
+
+#note-viewer {
+    border: tall transparent;
+}
+
+Note:focus > #note-viewer {
+    border: tall $primary;
+}
