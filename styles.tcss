@@ -10,11 +10,9 @@ Container {
 
 #note-content {
     column-span: 2;
-    height: 100%;
 }
 
 Note {
-    height: 100%;
     background: transparent;
 }
 
@@ -28,4 +26,8 @@ TaskList {
 
 Note:focus > #note-viewer {
     border: tall $primary;
+}
+
+.hidden {
+    display: none;
 }
