@@ -32,10 +32,19 @@ Note:focus > #note-viewer {
     display: none;
 }
 
+#task-list-search-input:focus {
+    border: tall transparent;
+    background: gray 30%;
+}
+
 ListItem.-highlight {
     background: transparent;
 }
 
 ListItem.-highlight > Checkbox {
-    background: cyan 20%;
+    border: tall gray 40%;
+}
+
+TaskListView:focus > ListItem.-highlight > Checkbox {
+    border: tall $primary;
 }

@@ -40,10 +40,6 @@ class TaskListView(ListView):
     async def watch_tasks(self) -> None:
         await self.recompose()
 
-    def set_tasks(self, tasks: list[Task]) -> "TaskListView":
-        self.tasks = tasks
-        return self
-
 
 class TaskList(Widget):
     all_tasks: reactive[list[Task]] = reactive([])
@@ -65,6 +61,7 @@ class TaskList(Widget):
     def on_mount(self) -> None:
         task_list = self.query_one("#task-list", TaskListView)
         task_list.focus()
+        task_list.index = 0
 
     @on(TaskListSearch.Changed, "#task-list-search-input")
     def search_tasks(self, event: Input.Changed) -> None:
@@ -85,7 +82,7 @@ class TaskList(Widget):
         self.displayed_tasks = self.all_tasks
 
     async def watch_displayed_tasks(self) -> None:
-        self.get_task_view_element().set_tasks(self.displayed_tasks)
+        self.get_task_view_element().tasks = self.displayed_tasks
 
     def get_search_input_element(self) -> Input:
         return self.query_one("#task-list-search-input", TaskListSearch)
