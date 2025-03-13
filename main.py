@@ -8,8 +8,7 @@ from textual.reactive import reactive
 from textual import on
 
 from models.task import Task
-from components.task_list import TaskList
-from components.new_task import NewTask
+from components.task_list import TaskList, TaskListSearch
 from components.note import Note
 
 
@@ -21,7 +20,6 @@ tasks = [
 
 class Terdo(App):
     BINDINGS = [
-        ("n", "new", "New"),
         ("q", "quit", "Quit Terdo"),
     ]
 
@@ -33,8 +31,7 @@ class Terdo(App):
     def compose(self) -> ComposeResult:
         with Container():
             with VerticalScroll(id="task-list-container"):
-                yield NewTask(id="new-task", placeholder="Add a new task...")
-                yield TaskList(id="task-list")
+                yield TaskListSearch(id="task-list-search")
 
             yield Note(id="note-content")
 
@@ -44,27 +41,19 @@ class Terdo(App):
         self.tasks = tasks
         self.note_content = Path.cwd() / "markdown" / "Do groceries.md"
 
-        task_list_component = self.query_one("#task-list", TaskList)
+        task_list_component = self.query_one("#task-list-search", TaskListSearch)
         task_list_component.focus()
 
     async def action_quit(self) -> None:
         self.exit()
 
-    async def action_new(self) -> None:
-        new_task_component = self.query_one("#new-task", NewTask)
-        new_task_component.focus()
-
     async def watch_tasks(self) -> None:
-        task_list = self.query_one("#task-list", TaskList)
-        task_list.tasks = self.tasks
+        task_list = self.query_one("#task-list-search", TaskListSearch)
+        task_list.all_tasks = self.tasks
 
     async def watch_note_content(self) -> None:
         note = self.query_one("#note-content", Note)
         note.content = self.note_content
-
-    @on(NewTask.TaskSubmitted)
-    def submit_task(self, message: NewTask.TaskSubmitted) -> None:
-        self.tasks = self.tasks + [message.task]
 
     @on(TaskList.Highlighted)
     def item_highlighted(self, event: TaskList.Highlighted) -> None:
