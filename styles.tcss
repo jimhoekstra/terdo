@@ -5,7 +5,7 @@ Checkbox {
 Container {
     layout: grid;
     grid-size: 3 1;
-    grid-gutter: 3;
+    grid-gutter: 2;
 }
 
 #note-content {
@@ -16,7 +16,7 @@ Note {
     background: transparent;
 }
 
-TaskList {
+TaskList, TaskListView {
     background: transparent;
 }
 
@@ -30,4 +30,12 @@ Note:focus > #note-viewer {
 
 .hidden {
     display: none;
+}
+
+ListItem.-highlight {
+    background: transparent;
+}
+
+ListItem.-highlight > Checkbox {
+    background: cyan 20%;
 }

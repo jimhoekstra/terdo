@@ -8,7 +8,7 @@ from textual.reactive import reactive
 from textual import on
 
 from models.task import Task
-from components.task_list import TaskList, TaskListSearch
+from components.task_list import TaskListView, TaskList
 from components.note import Note
 
 
@@ -31,7 +31,7 @@ class Terdo(App):
     def compose(self) -> ComposeResult:
         with Container():
             with VerticalScroll(id="task-list-container"):
-                yield TaskListSearch(id="task-list-search")
+                yield TaskList(id="task-list-search")
 
             yield Note(id="note-content")
 
@@ -41,22 +41,22 @@ class Terdo(App):
         self.tasks = tasks
         self.note_content = Path.cwd() / "markdown" / "Do groceries.md"
 
-        task_list_component = self.query_one("#task-list-search", TaskListSearch)
+        task_list_component = self.query_one("#task-list-search", TaskList)
         task_list_component.focus()
 
     async def action_quit(self) -> None:
         self.exit()
 
     async def watch_tasks(self) -> None:
-        task_list = self.query_one("#task-list-search", TaskListSearch)
+        task_list = self.query_one("#task-list-search", TaskList)
         task_list.all_tasks = self.tasks
 
     async def watch_note_content(self) -> None:
         note = self.query_one("#note-content", Note)
         note.content = self.note_content
 
-    @on(TaskList.Highlighted)
-    def item_highlighted(self, event: TaskList.Highlighted) -> None:
+    @on(TaskListView.Highlighted)
+    def item_highlighted(self, event: TaskListView.Highlighted) -> None:
         note = self.query_one("#note-content", Note)
 
         item = event.item

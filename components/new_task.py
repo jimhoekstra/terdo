@@ -11,6 +11,9 @@ class NewTask(Input):
             self.task = task
             super().__init__()
 
+    def __init__(self, **kwargs) -> None:
+        super().__init__(placeholder="Add a new task...", **kwargs)
+
     @on(Input.Submitted)
     def submit_input(self, event: Input.Submitted) -> None:
         # TODO: give correct value for id

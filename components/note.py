@@ -52,7 +52,7 @@ class Note(Widget):
         textarea_element = self.query_one("#note-editor", TextArea)
         textarea_element.add_class("hidden")
 
-        self.content.write_text(textarea_element.text)
+        self.content.write_text(textarea_element.text.strip())
         await self.reload_content()
 
         self.focus()
