@@ -31,8 +31,14 @@ class TaskListSearch(Input):
 class TaskListView(ListView):
     BINDINGS = [("j", "cursor_down", "Next"), ("k", "cursor_up", "Previous")]
 
-    def append_task(self, task: Task) -> None:
-        self.append(ListItem(Checkbox(task.name), name=task.name))
+    async def append_task(self, task: Task) -> None:
+        await self.append(ListItem(Checkbox(task.name), name=task.name))
+
+    async def remove_task(self, task: Task) -> None:
+        for idx, child in enumerate(self.children):
+            if task.name == child.name:
+                self.remove_items([idx])
+                break
 
     def set_index(self, index: int) -> "TaskListView":
         self.index = index
@@ -40,8 +46,7 @@ class TaskListView(ListView):
 
 
 class TaskList(Widget):
-    all_tasks: reactive[list[Task]] = reactive([])
-    displayed_tasks: reactive[list[Task]] = reactive([])
+    all_tasks: list[Task] = []
 
     BINDINGS = [
         ("s", "search_tasks", "Search Tasks"),
@@ -51,7 +56,6 @@ class TaskList(Widget):
         yield TaskListSearch(
             placeholder="Search for tasks...",
             id="task-list-search-input",
-            classes="hidden",
         )
         yield NewTask(id="new-task-input", classes="hidden")
         yield TaskListView(id="task-list")
@@ -59,43 +63,42 @@ class TaskList(Widget):
     def on_mount(self) -> None:
         self.get_task_view_element().focus().set_index(0)
 
-    def append_tasks(self, tasks: list[Task]) -> None:
+    async def set_tasks(self, tasks: list[Task]) -> None:
         task_view_element = self.get_task_view_element()
+        task_view_element.clear()
         for task in tasks:
-            task_view_element.append_task(task)
+            await task_view_element.append_task(task)
         task_view_element.set_index(0)
+        self.all_tasks = tasks
 
     @on(TaskListSearch.Changed, "#task-list-search-input")
-    def search_tasks(self, event: Input.Changed) -> None:
-        search_term = event.value
+    async def search_task_trigger(self, event: Input.Changed) -> None:
+        await self.search_tasks(event.value)
+        
+    async def search_tasks(self, search_term: str) -> None:
+        relevant_tasks = [task for task in self.all_tasks if search_term.lower() in task.name.lower()]
+        task_view_element = self.get_task_view_element()
+        task_view_element.clear()
+        for task in relevant_tasks:
+            await task_view_element.append_task(task)    
 
-        # Query all tasks in the task view
-        task_items = self.get_task_view_element().query_children(ListItem)
-
-        for task_item in task_items:
-            task_item_name = task_item.name
-            if task_item_name is None:
-                continue
-
-            # Make sure that items matching the query are shown
-            if search_term.lower() in task_item_name.lower():
-                task_item.remove_class("hidden")
-
-            # Hide items that don't match the query
-            else:
-                task_item.add_class("hidden")
+        task_view_element.set_index(0)
 
     @on(TaskListSearch.SearchCancelled, "#task-list-search-input")
-    def cancel_search(self, event: TaskListSearch.SearchCancelled) -> None:
-        self.get_search_input_element().add_class("hidden")
+    async def cancel_search(self, event: TaskListSearch.SearchCancelled) -> None:
+        task_view_element = self.get_task_view_element()
+        task_view_element.clear()
+        for task in self.all_tasks:
+            await task_view_element.append_task(task)
 
-        # Make sure all tasks are visible
-        task_items = self.get_task_view_element().query_children(ListItem)
-        for task_item in task_items:
-            task_item.remove_class("hidden")
+        task_view_element.focus()
+        task_view_element.set_index(0)
+
+        self.get_search_input_element().clear()
 
     async def action_search_tasks(self) -> None:
-        self.get_search_input_element().remove_class("hidden").focus()
+        search_input_element = self.get_search_input_element()
+        search_input_element.focus()
 
     def get_search_input_element(self) -> Input:
         return self.query_one("#task-list-search-input", TaskListSearch)

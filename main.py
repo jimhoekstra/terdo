@@ -1,3 +1,4 @@
+from datetime import datetime
 from pathlib import Path
 
 from textual.app import App, ComposeResult
@@ -12,13 +13,16 @@ from components.task_list import TaskListView, TaskList
 from components.note import Note
 
 
-dir = Path.cwd() / "markdown"
-
-tasks = [
-    Task(id=idx, name=str(file_name).split("/")[-1].removesuffix(".md"))
-    for idx, file_name in enumerate(dir.iterdir())
-    if file_name.is_file() and file_name.suffix == ".md"
-]
+def load_tasks(dir: Path) -> list[Task]:
+    return [
+        Task(
+            id=idx, 
+            name=str(file_name).split("/")[-1].removesuffix(".md"),
+            last_edited=datetime.fromtimestamp(file_name.stat().st_mtime),
+        )
+        for idx, file_name in enumerate(dir.iterdir())
+        if file_name.is_file() and file_name.suffix == ".md"
+    ]
 
 
 class Terdo(App):
@@ -39,9 +43,10 @@ class Terdo(App):
 
         yield Footer()
 
-    def on_mount(self) -> None:
+    async def on_mount(self) -> None:
+        tasks = load_tasks(Path.cwd() / "markdown")
         task_list = self.query_one("#task-list-search", TaskList)
-        task_list.append_tasks(tasks)
+        await task_list.set_tasks(tasks)
 
         task_list_component = self.query_one("#task-list-search", TaskList)
         task_list_component.focus()
