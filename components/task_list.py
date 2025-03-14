@@ -29,16 +29,14 @@ class TaskListSearch(Input):
 
 
 class TaskListView(ListView):
-    tasks: reactive[list[Task]] = reactive([])
-
     BINDINGS = [("j", "cursor_down", "Next"), ("k", "cursor_up", "Previous")]
 
-    def compose(self) -> ComposeResult:
-        for task in self.tasks:
-            yield ListItem(Checkbox(task.name), name=task.name)
+    def append_task(self, task: Task) -> None:
+        self.append(ListItem(Checkbox(task.name), name=task.name))
 
-    async def watch_tasks(self) -> None:
-        await self.recompose()
+    def set_index(self, index: int) -> "TaskListView":
+        self.index = index
+        return self
 
 
 class TaskList(Widget):
@@ -59,30 +57,45 @@ class TaskList(Widget):
         yield TaskListView(id="task-list")
 
     def on_mount(self) -> None:
-        task_list = self.query_one("#task-list", TaskListView)
-        task_list.focus()
-        task_list.index = 0
+        self.get_task_view_element().focus().set_index(0)
+
+    def append_tasks(self, tasks: list[Task]) -> None:
+        task_view_element = self.get_task_view_element()
+        for task in tasks:
+            task_view_element.append_task(task)
+        task_view_element.set_index(0)
 
     @on(TaskListSearch.Changed, "#task-list-search-input")
     def search_tasks(self, event: Input.Changed) -> None:
         search_term = event.value
-        self.displayed_tasks = [
-            task for task in self.all_tasks if search_term.lower() in task.name.lower()
-        ]
+
+        # Query all tasks in the task view
+        task_items = self.get_task_view_element().query_children(ListItem)
+
+        for task_item in task_items:
+            task_item_name = task_item.name
+            if task_item_name is None:
+                continue
+
+            # Make sure that items matching the query are shown
+            if search_term.lower() in task_item_name.lower():
+                task_item.remove_class("hidden")
+
+            # Hide items that don't match the query
+            else:
+                task_item.add_class("hidden")
 
     @on(TaskListSearch.SearchCancelled, "#task-list-search-input")
     def cancel_search(self, event: TaskListSearch.SearchCancelled) -> None:
         self.get_search_input_element().add_class("hidden")
-        self.displayed_tasks = self.all_tasks
+
+        # Make sure all tasks are visible
+        task_items = self.get_task_view_element().query_children(ListItem)
+        for task_item in task_items:
+            task_item.remove_class("hidden")
 
     async def action_search_tasks(self) -> None:
         self.get_search_input_element().remove_class("hidden").focus()
-
-    async def watch_all_tasks(self) -> None:
-        self.displayed_tasks = self.all_tasks
-
-    async def watch_displayed_tasks(self) -> None:
-        self.get_task_view_element().tasks = self.displayed_tasks
 
     def get_search_input_element(self) -> Input:
         return self.query_one("#task-list-search-input", TaskListSearch)

@@ -12,9 +12,12 @@ from components.task_list import TaskListView, TaskList
 from components.note import Note
 
 
+dir = Path.cwd() / "markdown"
+
 tasks = [
-    Task(id=1, name="Do groceries"),
-    Task(id=2, name="Finish homework"),
+    Task(id=idx, name=str(file_name).split("/")[-1].removesuffix(".md"))
+    for idx, file_name in enumerate(dir.iterdir())
+    if file_name.is_file() and file_name.suffix == ".md"
 ]
 
 
@@ -25,7 +28,6 @@ class Terdo(App):
 
     CSS_PATH = "styles.tcss"
 
-    tasks: reactive[list[Task]] = reactive([])
     note_content: reactive[Path] = reactive(Path.cwd() / "markdown" / "Do groceries.md")
 
     def compose(self) -> ComposeResult:
@@ -38,18 +40,14 @@ class Terdo(App):
         yield Footer()
 
     def on_mount(self) -> None:
-        self.tasks = tasks
-        self.note_content = Path.cwd() / "markdown" / "Do groceries.md"
+        task_list = self.query_one("#task-list-search", TaskList)
+        task_list.append_tasks(tasks)
 
         task_list_component = self.query_one("#task-list-search", TaskList)
         task_list_component.focus()
 
     async def action_quit(self) -> None:
         self.exit()
-
-    async def watch_tasks(self) -> None:
-        task_list = self.query_one("#task-list-search", TaskList)
-        task_list.all_tasks = self.tasks
 
     async def watch_note_content(self) -> None:
         note = self.query_one("#note-content", Note)
