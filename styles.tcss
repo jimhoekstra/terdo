@@ -45,6 +45,6 @@ ListItem.-highlight > Checkbox {
     border: tall gray 40%;
 }
 
-TaskListView:focus > ListItem.-highlight > Checkbox {
+TaskList:focus > ListItem.-highlight > Checkbox {
     border: tall $primary;
 }

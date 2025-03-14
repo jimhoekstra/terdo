@@ -9,14 +9,14 @@ from textual.reactive import reactive
 from textual import on
 
 from models.task import Task
-from components.task_list import TaskListView, TaskList
+from components.task_overview import TaskList, TaskOverview
 from components.note import Note
 
 
 def load_tasks(dir: Path) -> list[Task]:
     return [
         Task(
-            id=idx, 
+            id=idx,
             name=str(file_name).split("/")[-1].removesuffix(".md"),
             last_edited=datetime.fromtimestamp(file_name.stat().st_mtime),
         )
@@ -37,7 +37,7 @@ class Terdo(App):
     def compose(self) -> ComposeResult:
         with Container():
             with VerticalScroll(id="task-list-container"):
-                yield TaskList(id="task-list-search")
+                yield TaskOverview(id="task-list-search")
 
             yield Note(id="note-content")
 
@@ -45,10 +45,10 @@ class Terdo(App):
 
     async def on_mount(self) -> None:
         tasks = load_tasks(Path.cwd() / "markdown")
-        task_list = self.query_one("#task-list-search", TaskList)
+        task_list = self.query_one("#task-list-search", TaskOverview)
         await task_list.set_tasks(tasks)
 
-        task_list_component = self.query_one("#task-list-search", TaskList)
+        task_list_component = self.query_one("#task-list-search", TaskOverview)
         task_list_component.focus()
 
     async def action_quit(self) -> None:
@@ -58,8 +58,8 @@ class Terdo(App):
         note = self.query_one("#note-content", Note)
         note.content = self.note_content
 
-    @on(TaskListView.Highlighted)
-    def item_highlighted(self, event: TaskListView.Highlighted) -> None:
+    @on(TaskList.Highlighted)
+    def item_highlighted(self, event: TaskList.Highlighted) -> None:
         note = self.query_one("#note-content", Note)
 
         item = event.item
