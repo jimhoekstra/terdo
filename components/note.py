@@ -6,7 +6,9 @@ from pathlib import Path
 
 
 class Note(Widget):
-    content: reactive[Path] = reactive(Path.cwd() / "markdown" / "Do groceries.md")
+    content: reactive[Path] = reactive(
+        Path.cwd() / "markdown" / "Do groceries.md"
+    )
     can_focus = True
 
     BINDINGS = [
@@ -17,7 +19,9 @@ class Note(Widget):
 
     def compose(self) -> ComposeResult:
         yield Markdown("", id="note-viewer")
-        yield TextArea("", language="markdown", id="note-editor", classes="hidden")
+        yield TextArea(
+            "", language="markdown", id="note-editor", classes="hidden"
+        )
 
     async def watch_content(self) -> None:
         await self.reload_content()
@@ -40,7 +44,10 @@ class Note(Widget):
         lines = markdown_text.split("\n")
         num_lines = len(lines)
         num_chars_in_last_line = len(lines[-1])
-        textarea_element.cursor_location = (num_lines - 1, num_chars_in_last_line)
+        textarea_element.cursor_location = (
+            num_lines - 1,
+            num_chars_in_last_line,
+        )
         textarea_element.insert(" ")
 
         textarea_element.focus()

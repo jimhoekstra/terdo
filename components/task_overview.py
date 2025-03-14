@@ -39,9 +39,15 @@ class TaskOverview(Widget):
     async def search_task_trigger(self, event: Input.Changed) -> None:
         await self.search_tasks(event.value)
 
+    @on(Search.Submitted, "#task-list-search-input")
+    async def search_submit_trigger(self, event: Input.Submitted) -> None:
+        self.get_task_view_element().focus().set_index(0)
+
     async def search_tasks(self, search_term: str) -> None:
         relevant_tasks = [
-            task for task in self.all_tasks if search_term.lower() in task.name.lower()
+            task
+            for task in self.all_tasks
+            if search_term.lower() in task.name.lower()
         ]
         task_view_element = self.get_task_view_element()
         task_view_element.clear()

@@ -4,7 +4,6 @@ from pathlib import Path
 from textual.app import App, ComposeResult
 from textual.widgets import Footer
 from textual.containers import VerticalScroll, Container
-
 from textual.reactive import reactive
 from textual import on
 
@@ -32,9 +31,16 @@ class Terdo(App):
 
     CSS_PATH = "styles.tcss"
 
-    note_content: reactive[Path] = reactive(Path.cwd() / "markdown" / "Do groceries.md")
+    note_content: reactive[Path] = reactive(
+        Path.cwd() / "markdown" / "Do groceries.md"
+    )
 
     def compose(self) -> ComposeResult:
+        """Returns the main UI layout.
+
+        Returns:
+            The composed UI layout structure
+        """
         with Container():
             with VerticalScroll(id="task-list-container"):
                 yield TaskOverview(id="task-list-search")
@@ -44,14 +50,16 @@ class Terdo(App):
         yield Footer()
 
     async def on_mount(self) -> None:
+        # Load the tasks in the main markdown directory, and pass them to the task list element
         tasks = load_tasks(Path.cwd() / "markdown")
-        task_list = self.query_one("#task-list-search", TaskOverview)
-        await task_list.set_tasks(tasks)
-
         task_list_component = self.query_one("#task-list-search", TaskOverview)
+        await task_list_component.set_tasks(tasks)
+
+        # Focus the task list so the user can immediately start navigating tasks
         task_list_component.focus()
 
     async def action_quit(self) -> None:
+        """Exits the program by calling the exit method."""
         self.exit()
 
     async def watch_note_content(self) -> None:
