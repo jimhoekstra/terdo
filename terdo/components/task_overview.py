@@ -1,28 +1,35 @@
+from pathlib import Path
+
 from textual.app import ComposeResult
 from textual.widgets import Input
 from textual.widget import Widget
+from textual.reactive import reactive
 from textual import on
 
 from models.task import Task
-from components.new_task import NewTask
 from components.search import Search
 from components.task_list import TaskList
 
 
 class TaskOverview(Widget):
     all_tasks: list[Task] = []
+    markdown_dir: reactive[Path]
 
     BINDINGS = [
         ("s", "search_tasks", "Search Tasks"),
+        ("n", "new_task", "New Tasks"),
     ]
+
+    def __init__(self, markdown_dir: Path, **kwargs) -> None:
+        self.markdown_dir = markdown_dir
+        super().__init__(**kwargs)
 
     def compose(self) -> ComposeResult:
         yield Search(
             placeholder="Search for tasks...",
             id="task-list-search-input",
         )
-        yield NewTask(id="new-task-input", classes="hidden")
-        yield TaskList(id="task-list")
+        yield TaskList(markdown_dir=self.markdown_dir, id="task-list")
 
     def on_mount(self) -> None:
         self.get_task_view_element().focus().set_index(0)
@@ -71,6 +78,9 @@ class TaskOverview(Widget):
     async def action_search_tasks(self) -> None:
         search_input_element = self.get_search_input_element()
         search_input_element.focus()
+
+    async def watch_markdown_dir(self) -> None:
+        self.get_task_view_element().markdown_dir = self.markdown_dir
 
     def get_search_input_element(self) -> Input:
         return self.query_one("#task-list-search-input", Search)

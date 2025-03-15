@@ -1,27 +1,14 @@
-from datetime import datetime
 from pathlib import Path
 
 from textual.app import App, ComposeResult
-from textual.widgets import Footer
-from textual.containers import VerticalScroll, Container
+from textual.widgets import Footer, Label
+from textual.containers import VerticalScroll, Horizontal, Grid
 from textual.reactive import reactive
 from textual import on
 
-from models.task import Task
 from components.task_overview import TaskList, TaskOverview
 from components.note import Note
-
-
-def load_tasks(dir: Path) -> list[Task]:
-    return [
-        Task(
-            id=idx,
-            name=str(file_name).split("/")[-1].removesuffix(".md"),
-            last_edited=datetime.fromtimestamp(file_name.stat().st_mtime),
-        )
-        for idx, file_name in enumerate(dir.iterdir())
-        if file_name.is_file() and file_name.suffix == ".md"
-    ]
+from utils.io import load_tasks_in_dir, get_root_markdown_dir
 
 
 class Terdo(App):
@@ -30,41 +17,50 @@ class Terdo(App):
     ]
 
     CSS_PATH = "styles.tcss"
-
-    note_content: reactive[Path] = reactive(
-        Path.cwd() / "markdown" / "Test file.md"
-    )
+    markdown_dir: reactive[Path] = reactive(get_root_markdown_dir())
 
     def compose(self) -> ComposeResult:
-        """Returns the main UI layout.
+        """Compose the main UI layout.
 
         Returns:
             The composed UI layout structure
         """
-        with Container():
+        yield Horizontal(
+            Label("Path: "),
+            Label("root", classes="path"),
+            Label(" / "),
+            Label("example", classes="path"),
+            Label(" / "),
+            Label("path", classes="path"),
+            id="path-label",
+        )
+        with Grid(id="main-container"):
             with VerticalScroll(id="task-list-container"):
-                yield TaskOverview(id="task-list-search")
+                yield TaskOverview(markdown_dir=self.markdown_dir, id="task-list-search")
 
+            # The Note element contains either a Markdown element showing the
+            # contents of a note or a Textarea element in which the contents
+            # can edited, depending on the state of the app.
             yield Note(id="note-content")
 
-        yield Footer()
+        # yield Footer()
 
     async def on_mount(self) -> None:
-        # Load the tasks in the main markdown directory, and pass them to the task list element
-        tasks = load_tasks(Path.cwd() / "markdown")
-        task_list_component = self.query_one("#task-list-search", TaskOverview)
+        await self.set_directory(self.markdown_dir)
+
+    async def watch_markdown_dir(self) -> None:
+        await self.set_directory(self.markdown_dir)
+
+    async def set_directory(
+        self, markdown_dir: Path, focus_task_list: bool = True
+    ) -> None:
+        tasks = load_tasks_in_dir(markdown_dir)
+        task_list_component = self.query_one(TaskOverview)
+        task_list_component.markdown_dir = self.markdown_dir
         await task_list_component.set_tasks(tasks)
 
-        # Focus the task list so the user can immediately start navigating tasks
-        task_list_component.focus()
-
-    async def action_quit(self) -> None:
-        """Exits the program by calling the exit method."""
-        self.exit()
-
-    async def watch_note_content(self) -> None:
-        note = self.query_one("#note-content", Note)
-        note.content = self.note_content
+        if focus_task_list:
+            task_list_component.focus()
 
     @on(TaskList.Highlighted)
     def item_highlighted(self, event: TaskList.Highlighted) -> None:
@@ -79,6 +75,19 @@ class Terdo(App):
             return
 
         note.content = Path.cwd() / "markdown" / f"{item_name}.md"
+
+    @on(TaskList.Selected)
+    def item_selected(self, event: TaskList.Highlighted) -> None:
+        note = self.query_one("#note-content", Note)
+        note.focus()
+
+    @on(TaskList.RerenderTaskList)
+    async def rerender_task_list(self):
+        await self.set_directory(self.markdown_dir)
+
+    async def action_quit(self) -> None:
+        """Exits the program by calling the exit method."""
+        self.exit()
 
 
 if __name__ == "__main__":

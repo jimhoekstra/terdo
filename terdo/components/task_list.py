@@ -1,12 +1,15 @@
 from pathlib import Path
+from datetime import datetime
 
 from textual.widgets import Checkbox, ListView, ListItem, Label, Button
 from textual.screen import ModalScreen
 from textual.containers import Grid
 from textual.app import ComposeResult
+from textual.message import Message
 from textual import on
 
 from models.task import Task
+from utils.io import create_new_markdown_file, get_default_new_file_name
 
 
 class DeleteTaskModal(ModalScreen[bool]):
@@ -22,8 +25,8 @@ class DeleteTaskModal(ModalScreen[bool]):
         yield Grid(
             Label("Are you sure you want to delete this task:", id="question"),
             Label(self.task_to_delete.name, id="task-to-delete"),
-            Button("Delete", variant="error", id="delete"),
             Button("Cancel", variant="primary", id="cancel"),
+            Button("Delete", variant="error", id="delete"),
             id="dialog",
         )
 
@@ -37,11 +40,21 @@ class DeleteTaskModal(ModalScreen[bool]):
 
 
 class TaskList(ListView):
+    class RerenderTaskList(Message):
+        pass
+
     BINDINGS = [
         ("j", "cursor_down", "Next"),
         ("k", "cursor_up", "Previous"),
         ("d", "delete_task", "Delete"),
+        ("n", "new_task", "New Task"),
     ]
+
+    markdown_dir: Path
+
+    def __init__(self, markdown_dir: Path, **kwargs) -> None:
+        self.markdown_dir = markdown_dir
+        super().__init__(**kwargs)
 
     async def append_task(self, task: Task) -> None:
         await self.append(ListItem(Checkbox(task.name), name=task.name))
@@ -64,6 +77,19 @@ class TaskList(ListView):
                 path_to_file = Path.cwd() / "markdown" / f"{task_name}.md"
                 path_to_file.unlink()
 
+                # Since we deleted a file, we want the main app to reload and 
+                # rerender the list of tasks that is shown to the user.
+                self.post_message(self.RerenderTaskList())
+
+        # Show the modal screen for confirming the delete action
         self.app.push_screen(
-            DeleteTaskModal(Task(name=task_name, id=0)), confirm_delete
+            DeleteTaskModal(Task(name=task_name, last_edited=datetime.now())),
+            # callback function that handles the user's input in the modal
+            confirm_delete,
         )
+
+    def action_new_task(self) -> None:
+        # TODO: create new task in current directory
+        new_file_name = get_default_new_file_name(self.markdown_dir)
+        create_new_markdown_file(self.markdown_dir, new_file_name)
+        self.post_message(self.RerenderTaskList())
