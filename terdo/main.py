@@ -32,7 +32,7 @@ class Terdo(App):
     CSS_PATH = "styles.tcss"
 
     note_content: reactive[Path] = reactive(
-        Path.cwd() / "markdown" / "Do groceries.md"
+        Path.cwd() / "markdown" / "Test file.md"
     )
 
     def compose(self) -> ComposeResult:

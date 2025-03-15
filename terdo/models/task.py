@@ -5,4 +5,4 @@ from datetime import datetime
 class Task(BaseModel):
     id: int
     name: str
-    last_edited: datetime
+    last_edited: datetime | None = None

@@ -6,9 +6,7 @@ from pathlib import Path
 
 
 class Note(Widget):
-    content: reactive[Path] = reactive(
-        Path.cwd() / "markdown" / "Do groceries.md"
-    )
+    content: reactive[Path] = reactive(Path.cwd() / "markdown" / "Test file.md")
     can_focus = True
 
     BINDINGS = [
@@ -20,7 +18,11 @@ class Note(Widget):
     def compose(self) -> ComposeResult:
         yield Markdown("", id="note-viewer")
         yield TextArea(
-            "", language="markdown", id="note-editor", classes="hidden"
+            "",
+            language="markdown",
+            id="note-editor",
+            classes="hidden",
+            show_line_numbers=True,
         )
 
     async def watch_content(self) -> None:
