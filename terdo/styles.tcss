@@ -72,6 +72,10 @@ DeleteTaskModal {
     align: center middle;
 }
 
+MarkdownBlockQuote {
+    padding: 1 1;
+}
+
 #dialog {
     grid-size: 2;
     grid-gutter: 1 2;

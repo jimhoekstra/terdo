@@ -77,7 +77,7 @@ class TaskList(ListView):
                 path_to_file = Path.cwd() / "markdown" / f"{task_name}.md"
                 path_to_file.unlink()
 
-                # Since we deleted a file, we want the main app to reload and 
+                # Since we deleted a file, we want the main app to reload and
                 # rerender the list of tasks that is shown to the user.
                 self.post_message(self.RerenderTaskList())
 

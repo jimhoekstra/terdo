@@ -53,13 +53,19 @@ def get_default_new_file_name(dir: Path) -> str:
         return f"{default_name} {int(counter)}"
 
     DEFAULT_NAME: str = "New markdown file"
-    markdown_files_in_dir = [file.name for file in list_markdown_files_in_dir(dir)]
+    markdown_files_in_dir = [
+        file.name for file in list_markdown_files_in_dir(dir)
+    ]
 
     counter = 0
-    candidate_name = add_markdown_extension(generate_candidate_name(DEFAULT_NAME, counter))
+    candidate_name = add_markdown_extension(
+        generate_candidate_name(DEFAULT_NAME, counter)
+    )
     while candidate_name in markdown_files_in_dir:
         counter += 1
-        candidate_name = add_markdown_extension(generate_candidate_name(DEFAULT_NAME, counter))
+        candidate_name = add_markdown_extension(
+            generate_candidate_name(DEFAULT_NAME, counter)
+        )
 
     return candidate_name
 

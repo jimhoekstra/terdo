@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from textual.app import App, ComposeResult
-from textual.widgets import Footer, Label
+from textual.widgets import Label
 from textual.containers import VerticalScroll, Horizontal, Grid
 from textual.reactive import reactive
 from textual import on
@@ -36,7 +36,9 @@ class Terdo(App):
         )
         with Grid(id="main-container"):
             with VerticalScroll(id="task-list-container"):
-                yield TaskOverview(markdown_dir=self.markdown_dir, id="task-list-search")
+                yield TaskOverview(
+                    markdown_dir=self.markdown_dir, id="task-list-search"
+                )
 
             # The Note element contains either a Markdown element showing the
             # contents of a note or a Textarea element in which the contents
