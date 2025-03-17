@@ -75,3 +75,10 @@ def create_new_markdown_file(dir: Path, name: str) -> Path:
     new_file_path = dir / name
     new_file_path.touch(exist_ok=False)
     return new_file_path
+
+
+def rename_markdown_file(
+    original_name: str, new_name: str, dir: Path = PATH_TO_MARKDOWN_DIR
+) -> None:
+    file = dir / add_markdown_extension(original_name)
+    file.rename(dir / add_markdown_extension(new_name))
