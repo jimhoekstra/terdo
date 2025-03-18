@@ -72,7 +72,7 @@ class Terdo(App):
         if item is None:
             return
 
-        item_name = item.name
+        item_name = item.task_name
         if item_name is None:
             return
 

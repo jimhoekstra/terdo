@@ -1,6 +1,7 @@
 from pathlib import Path
 from datetime import datetime
 
+from textual.widget import Widget
 from textual.widgets import Checkbox, ListView, ListItem, Label, Button, Input
 from textual.screen import ModalScreen
 from textual.containers import Grid
@@ -93,6 +94,15 @@ class DeleteTaskModal(ModalScreen[bool]):
         self.dismiss(True)
 
 
+class TaskListItem(ListItem):
+
+    task_name: str
+
+    def __init__(self, task_name: str, *children: Widget, **kwargs) -> None:
+        self.task_name = task_name
+        super().__init__(*children, **kwargs)
+
+
 class TaskList(ListView):
     class RerenderTaskList(Message):
         pass
@@ -112,7 +122,7 @@ class TaskList(ListView):
         super().__init__(**kwargs)
 
     async def append_task(self, task: Task) -> None:
-        await self.append(ListItem(Checkbox(task.name), name=task.name))
+        await self.append(TaskListItem(task.name, Checkbox(task.name), name=task.name))
 
     def set_index(self, index: int) -> "TaskList":
         self.index = index
@@ -143,6 +153,16 @@ class TaskList(ListView):
             confirm_delete,
         )
 
+    @property
+    def highlighted_child(self) -> TaskListItem | None:
+        """The currently highlighted TaskListItem, or None if nothing is highlighted."""
+        if self.index is not None and 0 <= self.index < len(self._nodes):
+            list_item = self._nodes[self.index]
+            assert isinstance(list_item, TaskListItem)
+            return list_item
+        else:
+            return None
+
     def action_new_task(self) -> None:
         new_file_name = get_default_new_file_name(self.markdown_dir)
         create_new_markdown_file(self.markdown_dir, new_file_name)
@@ -153,7 +173,7 @@ class TaskList(ListView):
         if highlighted is None:
             return
 
-        name = highlighted.name
+        name = highlighted.task_name
         if name is None:
             return
 
@@ -169,7 +189,7 @@ class TaskList(ListView):
         self, event: ChangeNameInput.ChangeNameCancelled
     ) -> None:
         input_element = event.sender
-        list_item_element = input_element.query_ancestor(ListItem)
+        list_item_element = input_element.query_ancestor(TaskListItem)
         list_item_element.remove_children()
 
         new_checkbox_element = Checkbox(event.note_name)
@@ -186,7 +206,8 @@ class TaskList(ListView):
         input_element = event.sender
         rename_markdown_file(event.original_name, event.new_name)
 
-        list_item_element = input_element.query_ancestor(ListItem)
+        list_item_element = input_element.query_ancestor(TaskListItem)
+        list_item_element.task_name = event.new_name
         list_item_element.remove_children()
 
         new_checkbox_element = Checkbox(event.new_name)
