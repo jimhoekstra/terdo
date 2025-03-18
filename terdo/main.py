@@ -1,8 +1,8 @@
 from pathlib import Path
 
 from textual.app import App, ComposeResult
-from textual.widgets import Label
-from textual.containers import VerticalScroll, Horizontal, Grid
+from textual.widgets import Footer
+from textual.containers import VerticalScroll, Grid
 from textual.reactive import reactive
 from textual import on
 
@@ -25,15 +25,6 @@ class Terdo(App):
         Returns:
             The composed UI layout structure
         """
-        yield Horizontal(
-            Label("Path: "),
-            Label("root", classes="path"),
-            Label(" / "),
-            Label("example", classes="path"),
-            Label(" / "),
-            Label("path", classes="path"),
-            id="path-label",
-        )
         with Grid(id="main-container"):
             with VerticalScroll(id="task-list-container"):
                 yield TaskOverview(
@@ -45,7 +36,9 @@ class Terdo(App):
             # can edited, depending on the state of the app.
             yield Note(id="note-content")
 
-        # yield Footer()
+        # The footer shows which keybindings are allowed in which application state
+        # TODO: make configurable whether to show the footer or not
+        yield Footer()
 
     async def on_mount(self) -> None:
         await self.set_directory(self.markdown_dir)

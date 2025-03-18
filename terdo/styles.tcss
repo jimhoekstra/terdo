@@ -1,3 +1,14 @@
+#note-viewer-container {
+    scrollbar-color: gray 20%;
+    scrollbar-background: $surface;
+    border: tall $surface;
+    background: $surface;
+}
+
+#note-viewer-container:focus {
+    border: tall $primary;
+}
+
 Checkbox {
     width: 100%;
 }
@@ -17,6 +28,7 @@ Checkbox {
 
 #main-container {
     grid-size: 3;
+    grid-gutter: 2;
 }
 
 #note-content {
@@ -35,7 +47,7 @@ TaskList {
     border: tall transparent;
 }
 
-Note:focus > #note-viewer {
+Note:focus > #note-viewer-container {
     border: tall $primary;
 }
 
