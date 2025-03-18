@@ -7,7 +7,6 @@ from textual.screen import ModalScreen
 from textual.containers import Grid
 from textual.app import ComposeResult
 from textual.message import Message
-from textual.dom import DOMNode
 from textual import on
 from textual.events import Blur
 
@@ -95,7 +94,6 @@ class DeleteTaskModal(ModalScreen[bool]):
 
 
 class TaskListItem(ListItem):
-
     task_name: str
 
     def __init__(self, task_name: str, *children: Widget, **kwargs) -> None:
@@ -106,6 +104,22 @@ class TaskListItem(ListItem):
 class TaskList(ListView):
     class RerenderTaskList(Message):
         pass
+
+    # TODO: figure out how to properly handle this so that the type checker
+    # understands what's going on and the "type: ignore" comments can be removed
+    class Highlighted(ListView.Highlighted):
+        def __init__(
+            self, list_view: "TaskList", item: TaskListItem | None
+        ) -> None:
+            super().__init__(list_view, item)
+            self.list_view: "TaskList" = list_view  # type: ignore
+            """The view that contains the item highlighted."""
+            self.item: TaskListItem | None = item  # type: ignore
+            """The highlighted item, if there is one highlighted."""
+
+        @property
+        def control(self) -> "TaskList":
+            return self.list_view
 
     BINDINGS = [
         ("j", "cursor_down", "Next"),
@@ -122,7 +136,9 @@ class TaskList(ListView):
         super().__init__(**kwargs)
 
     async def append_task(self, task: Task) -> None:
-        await self.append(TaskListItem(task.name, Checkbox(task.name), name=task.name))
+        await self.append(
+            TaskListItem(task.name, Checkbox(task.name), name=task.name)
+        )
 
     def set_index(self, index: int) -> "TaskList":
         self.index = index
