@@ -50,11 +50,12 @@ class Terdo(App):
         self, markdown_dir: Path, focus_task_list: bool = True
     ) -> None:
         tasks = load_tasks_in_dir(markdown_dir)
-        task_list_component = self.query_one(TaskOverview)
-        task_list_component.markdown_dir = self.markdown_dir
-        await task_list_component.set_tasks(tasks)
+        task_overview_component = self.query_one(TaskOverview)
+        task_overview_component.markdown_dir = self.markdown_dir
+        await task_overview_component.set_tasks(tasks)
 
         if focus_task_list:
+            task_list_component = task_overview_component.query_one(TaskList)
             task_list_component.focus()
 
     @on(TaskList.Highlighted)
@@ -77,7 +78,11 @@ class Terdo(App):
         note.focus()
 
     @on(TaskList.RerenderTaskList)
-    async def rerender_task_list(self):
+    async def rerender_from_task_list(self):
+        await self.set_directory(self.markdown_dir)
+
+    @on(Note.RerenderTaskList)
+    async def rerender_from_note(self):
         await self.set_directory(self.markdown_dir)
 
     async def action_quit(self) -> None:

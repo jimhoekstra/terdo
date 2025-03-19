@@ -9,14 +9,12 @@ from pathlib import Path
 
 
 class NoteEditor(TextArea):
-
     BINDINGS = [
         ("ctrl+s", "save", "Save"),
         ("escape", "close", "Close editor"),
     ]
 
     class Save(Message):
-
         sender: "NoteEditor"
         close_editor: bool
 
@@ -24,7 +22,7 @@ class NoteEditor(TextArea):
             self.sender = sender
             self.close_editor = close_editor
             super().__init__()
-        
+
         @property
         def control(self) -> "NoteEditor":
             return self.sender
@@ -45,8 +43,16 @@ class Note(Widget):
         ("e", "edit", "Edit"),
     ]
 
+    class RerenderTaskList(Message):
+        pass
+
     def compose(self) -> ComposeResult:
-        with VerticalScroll(can_focus=True, can_focus_children=False, can_maximize=True, id="note-viewer-container"):
+        with VerticalScroll(
+            can_focus=True,
+            can_focus_children=False,
+            can_maximize=True,
+            id="note-viewer-container",
+        ):
             yield Markdown("", id="note-viewer")
         yield NoteEditor(
             "",
@@ -64,7 +70,9 @@ class Note(Widget):
         await markdown_element.load(self.content)
 
     async def action_edit(self) -> None:
-        markdown_element = self.query_one("#note-viewer-container", VerticalScroll)
+        markdown_element = self.query_one(
+            "#note-viewer-container", VerticalScroll
+        )
         markdown_element.add_class("hidden")
 
         textarea_element = self.query_one("#note-editor", TextArea)
@@ -84,20 +92,21 @@ class Note(Widget):
         textarea_element.insert(" ")
 
         textarea_element.focus()
-    
+
     @on(NoteEditor.Save, "#note-editor")
     async def save(self, event: NoteEditor.Save) -> None:
-
         textarea_element = self.query_one("#note-editor", TextArea)
         self.content.write_text(textarea_element.text.strip())
-        
+
         if not event.close_editor:
             self.app.notify("Note saved successfully!")
-        
+
         if event.close_editor:
-            markdown_element = self.query_one("#note-viewer-container", VerticalScroll)
+            markdown_element = self.query_one(
+                "#note-viewer-container", VerticalScroll
+            )
             markdown_element.remove_class("hidden")
             textarea_element.add_class("hidden")
 
+            self.post_message(self.RerenderTaskList())
             await self.reload_content()
-            self.focus()
