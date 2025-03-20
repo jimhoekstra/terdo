@@ -6,9 +6,9 @@ from textual.widget import Widget
 from textual.reactive import reactive
 from textual import on
 
-from models.task import Task
-from components.search import Search
-from components.task_list import TaskList
+from terdo.models.task import Task
+from terdo.components.search import Search
+from terdo.components.task_list import TaskList
 
 
 class TaskOverview(Widget):

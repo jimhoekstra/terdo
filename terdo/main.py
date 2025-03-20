@@ -6,12 +6,18 @@ from textual.containers import VerticalScroll, Grid
 from textual.reactive import reactive
 from textual import on
 
-from components.task_overview import TaskList, TaskOverview
-from components.note import Note
-from utils.io import load_tasks_in_dir, get_root_markdown_dir
+from terdo.components.task_overview import TaskList, TaskOverview
+from terdo.components.note import Note
+from terdo.utils.io import load_tasks_in_dir, get_root_markdown_dir
 
 
 class Terdo(App):
+    """The main application class for Terdo.
+
+    This class is responsible for setting up the main UI layout and handling
+    the application state.
+    """
+
     BINDINGS = [
         ("q", "quit", "Quit Terdo"),
     ]
@@ -25,6 +31,8 @@ class Terdo(App):
         Returns:
             The composed UI layout structure
         """
+        # The main grid layout that shows the task list on the left of the screen,
+        # and the note content or editor on the right.
         with Grid(id="main-container"):
             with VerticalScroll(id="task-list-container"):
                 yield TaskOverview(
@@ -41,14 +49,25 @@ class Terdo(App):
         yield Footer()
 
     async def on_mount(self) -> None:
+        """Sets up the app when the app is mounted."""
         await self.set_directory(self.markdown_dir)
 
     async def watch_markdown_dir(self) -> None:
+        """Sets the directory shown in the app to the given directory when it changes."""
         await self.set_directory(self.markdown_dir)
 
     async def set_directory(
         self, markdown_dir: Path, focus_task_list: bool = True
     ) -> None:
+        """Sets the directory shown in the app to the given directory.
+
+        Parameters
+        ----------
+        markdown_dir
+            The directory to show in the app.
+        focus_task_list
+            Whether to focus the task list after loading the tasks.
+        """
         tasks = load_tasks_in_dir(markdown_dir)
         task_overview_component = self.query_one(TaskOverview)
         task_overview_component.markdown_dir = self.markdown_dir
@@ -59,7 +78,14 @@ class Terdo(App):
             task_list_component.focus()
 
     @on(TaskList.Highlighted)
-    def item_highlighted(self, event: TaskList.Highlighted) -> None:
+    def load_note(self, event: TaskList.Highlighted) -> None:
+        """Loads the note content for the selected task.
+
+        Parameters
+        ----------
+        event
+            The event containing the selected task.
+        """
         note = self.query_one("#note-content", Note)
 
         item = event.item
@@ -74,15 +100,20 @@ class Terdo(App):
 
     @on(TaskList.Selected)
     def item_selected(self, event: TaskList.Highlighted) -> None:
+        """Focuses the Note element when a task is selected."""
         note = self.query_one("#note-content", Note)
         note.focus()
 
     @on(TaskList.RerenderTaskList)
     async def rerender_from_task_list(self):
+        """Reloads the task list when a task is added or removed."""
+        # TODO: resolve duplication with rerender_from_note
         await self.set_directory(self.markdown_dir)
 
     @on(Note.RerenderTaskList)
     async def rerender_from_note(self):
+        """Reloads the task list when the note is saved."""
+        # TODO: resolve duplication with rerender_from_task_list
         await self.set_directory(self.markdown_dir)
 
     async def action_quit(self) -> None:
@@ -91,5 +122,6 @@ class Terdo(App):
 
 
 if __name__ == "__main__":
+    # Run the app if the script is executed
     app = Terdo()
     app.run()

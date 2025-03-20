@@ -1,7 +1,7 @@
 from pathlib import Path
 from datetime import datetime
 
-from models.task import Task
+from terdo.models.task import Task
 
 
 PATH_TO_MARKDOWN_DIR = Path.cwd() / "markdown"

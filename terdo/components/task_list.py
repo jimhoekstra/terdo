@@ -10,8 +10,8 @@ from textual.message import Message
 from textual import on
 from textual.events import Blur
 
-from models.task import Task
-from utils.io import (
+from terdo.models.task import Task
+from terdo.utils.io import (
     create_new_markdown_file,
     get_default_new_file_name,
     rename_markdown_file,

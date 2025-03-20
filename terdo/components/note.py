@@ -34,6 +34,15 @@ class NoteEditor(TextArea):
         self.post_message(self.Save(self, True))
 
 
+class VimVerticalScroll(VerticalScroll):
+    """A subclass of VerticalScroll that adds some Vim keybindngs to the keyboard controls."""
+
+    BINDINGS = [
+        ("j", "scroll_down", "Scroll Down"),
+        ("k", "scroll_up", "Scroll Up"),
+    ]
+
+
 class Note(Widget):
     content: reactive[Path] = reactive(Path.cwd() / "markdown" / "Test file.md")
     can_focus = False
@@ -47,7 +56,7 @@ class Note(Widget):
         pass
 
     def compose(self) -> ComposeResult:
-        with VerticalScroll(
+        with VimVerticalScroll(
             can_focus=True,
             can_focus_children=False,
             can_maximize=True,
@@ -71,7 +80,7 @@ class Note(Widget):
 
     async def action_edit(self) -> None:
         markdown_element = self.query_one(
-            "#note-viewer-container", VerticalScroll
+            "#note-viewer-container", VimVerticalScroll
         )
         markdown_element.add_class("hidden")
 
@@ -103,7 +112,7 @@ class Note(Widget):
 
         if event.close_editor:
             markdown_element = self.query_one(
-                "#note-viewer-container", VerticalScroll
+                "#note-viewer-container", VimVerticalScroll
             )
             markdown_element.remove_class("hidden")
             textarea_element.add_class("hidden")
