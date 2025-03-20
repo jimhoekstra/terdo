@@ -26,22 +26,12 @@ class NoteEditor(TextArea):
         @property
         def control(self) -> "NoteEditor":
             return self.sender
-    
+
     async def action_save(self) -> None:
         self.post_message(self.Save(self, False))
 
     async def action_close(self) -> None:
         self.post_message(self.Save(self, True))
-
-
-class VimVerticalScroll(VerticalScroll):
-
-    BINDINGS = [
-        ("j", "scroll_down", "Scroll Down"),
-        ("k", "scroll_up", "Scroll Up"),
-        ("J", "page_down", "Page Down"),
-        ("K", "page_up", "Page Up"),
-    ]
 
 
 class Note(Widget):
@@ -57,21 +47,20 @@ class Note(Widget):
         pass
 
     def compose(self) -> ComposeResult:
-        with VimVerticalScroll(
+        with VerticalScroll(
             can_focus=True,
             can_focus_children=False,
             can_maximize=True,
             id="note-viewer-container",
         ):
             yield Markdown("", id="note-viewer")
-            yield NoteEditor(
-                "",
-                language="markdown",
-                id="note-editor",
-                classes="hidden",
-                show_line_numbers=True,
-                tab_behavior="indent",
-            )
+        yield NoteEditor(
+            "",
+            language="markdown",
+            id="note-editor",
+            classes="hidden",
+            show_line_numbers=True,
+        )
 
     async def watch_content(self) -> None:
         await self.reload_content()
@@ -82,11 +71,11 @@ class Note(Widget):
 
     async def action_edit(self) -> None:
         markdown_element = self.query_one(
-            "#note-viewer", Markdown
+            "#note-viewer-container", VerticalScroll
         )
         markdown_element.add_class("hidden")
 
-        textarea_element = self.query_one("#note-editor", NoteEditor)
+        textarea_element = self.query_one("#note-editor", TextArea)
         textarea_element.remove_class("hidden")
 
         markdown_text = self.content.read_text()
@@ -106,7 +95,7 @@ class Note(Widget):
 
     @on(NoteEditor.Save, "#note-editor")
     async def save(self, event: NoteEditor.Save) -> None:
-        textarea_element = self.query_one("#note-editor", NoteEditor)
+        textarea_element = self.query_one("#note-editor", TextArea)
         self.content.write_text(textarea_element.text.strip())
 
         if not event.close_editor:
@@ -114,7 +103,7 @@ class Note(Widget):
 
         if event.close_editor:
             markdown_element = self.query_one(
-                "#note-viewer", Markdown    
+                "#note-viewer-container", VerticalScroll
             )
             markdown_element.remove_class("hidden")
             textarea_element.add_class("hidden")
