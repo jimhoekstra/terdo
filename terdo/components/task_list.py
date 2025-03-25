@@ -100,6 +100,10 @@ class TaskListItem(ListItem):
         self.task_name = task_name
         super().__init__(*children, **kwargs)
 
+    def set_task_name(self, task_name: str) -> "TaskListItem":
+        self.task_name = task_name
+        return self
+
 
 class TaskList(ListView):
     class RerenderTaskList(Message):
@@ -223,11 +227,10 @@ class TaskList(ListView):
         rename_markdown_file(event.original_name, event.new_name)
 
         list_item_element = input_element.query_ancestor(TaskListItem)
-        list_item_element.task_name = event.new_name
+        list_item_element.set_task_name(event.new_name)
         list_item_element.remove_children()
 
         new_checkbox_element = Checkbox(event.new_name)
         list_item_element.mount(new_checkbox_element)
 
-        list_view = list_item_element.query_ancestor(ListView)
-        list_view.focus()
+        self.post_message(self.RerenderTaskList())
