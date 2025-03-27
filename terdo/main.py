@@ -8,7 +8,8 @@ from textual import on
 
 from terdo.components.task_overview import TaskList, TaskOverview
 from terdo.components.note import Note
-from terdo.utils.io import load_tasks_in_dir, get_root_markdown_dir
+from terdo.utils.io import get_root_markdown_dir
+from terdo.utils.tasks_io import load_tasks_in_dir
 
 
 class Terdo(App):
@@ -70,6 +71,7 @@ class Terdo(App):
         """
         tasks = load_tasks_in_dir(markdown_dir)
         task_overview_component = self.query_one(TaskOverview)
+        print(f"Setting markdwon dir to {markdown_dir}")
         task_overview_component.markdown_dir = self.markdown_dir
         await task_overview_component.set_tasks(tasks)
 
@@ -92,11 +94,8 @@ class Terdo(App):
         if item is None:
             return
 
-        item_name = item.task_name
-        if item_name is None:
-            return
-
-        note.content = Path.cwd() / "markdown" / f"{item_name}.md"
+        task = item.task_instance
+        note.content = task.path
 
     @on(TaskList.Selected)
     def item_selected(self, event: TaskList.Highlighted) -> None:
@@ -115,6 +114,24 @@ class Terdo(App):
         """Reloads the task list when the note is saved."""
         # TODO: resolve duplication with rerender_from_task_list
         await self.set_directory(self.markdown_dir)
+
+    @on(TaskList.SetDirectory)
+    async def set_directory_from_task_list(
+        self, event: TaskList.SetDirectory
+    ) -> None:
+        self.markdown_dir = event.markdown_dir
+
+    @on(TaskList.OpenParentDirectory)
+    async def open_parent_directory(self) -> None:
+        """Opens the parent directory of the current directory."""
+        if self.markdown_dir == get_root_markdown_dir():
+            self.app.notify(
+                "Already at the root directory.", severity="warning"
+            )
+            return
+
+        new_dir = self.markdown_dir.parent
+        self.markdown_dir = new_dir
 
     async def action_quit(self) -> None:
         """Exits the program by calling the exit method."""

@@ -1,7 +1,7 @@
 #note-viewer-container {
     scrollbar-color: gray 20%;
     scrollbar-background: $surface;
-    border: tall $surface;
+    border: tall transparent;
     background: $surface;
 }
 
@@ -9,8 +9,16 @@
     border: tall $primary;
 }
 
-Checkbox {
+.task {
     width: 100%;
+    background: $surface;
+    padding: 0 2;
+    border: tall transparent;
+}
+
+.task-info {
+    dock: right;
+    color: yellow;
 }
 
 #path-label {
@@ -64,19 +72,12 @@ Input {
     border: tall transparent;
 }
 
-ListItem > Checkbox {
-    border: tall transparent;
-}
 
-ListItem.-highlight {
-    background: transparent;
-}
-
-ListItem.-highlight > Checkbox {
+.task.-highlight {
     border: tall gray 40%;
 }
 
-TaskList:focus > ListItem.-highlight > Checkbox {
+TaskList:focus > .task.-highlight {
     border: tall $primary;
 }
 

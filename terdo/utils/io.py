@@ -1,7 +1,4 @@
 from pathlib import Path
-from datetime import datetime
-
-from terdo.models.task import Task
 
 
 PATH_TO_MARKDOWN_DIR = Path.cwd() / "markdown"
@@ -11,33 +8,28 @@ def get_root_markdown_dir() -> Path:
     return PATH_TO_MARKDOWN_DIR
 
 
-def file_path_to_task(file_path: Path) -> Task:
-    """Build a Task object given a file path."""
-    return Task(
-        name=file_path.name.removesuffix(".md"),
-        last_edited=datetime.fromtimestamp(file_path.stat().st_mtime),
-    )
-
-
-def order_tasks_by_last_edited(tasks: list[Task]) -> list[Task]:
-    """Order by last edited timestamp, with most recently edited first."""
-    return sorted(tasks, key=lambda x: x.last_edited.timestamp(), reverse=True)
-
-
 def list_markdown_files_in_dir(dir: Path) -> list[Path]:
     """Returns the names of all markdown files in a given directory."""
     dir_contents = list(dir.iterdir())
     markdown_files = [
-        item for item in dir_contents if item.is_file() and item.suffix == ".md"
+        item
+        for item in dir_contents
+        if item.is_file() and item.suffix == ".md" and item.name != "_index.md"
     ]
     return markdown_files
 
 
-def load_tasks_in_dir(dir: Path) -> list[Task]:
-    """Loads all the tasks in a given directory and returns them as Task objects."""
-    markdown_files = list_markdown_files_in_dir(dir)
-    tasks = [file_path_to_task(file_path) for file_path in markdown_files]
-    return order_tasks_by_last_edited(tasks)
+def list_markdown_dirs_in_dir(dir: Path) -> list[Path]:
+    def dir_contains_index_md(dir: Path) -> bool:
+        return any(file.name == "_index.md" for file in dir.iterdir())
+
+    dir_contents = list(dir.iterdir())
+    markdown_directories = [
+        item
+        for item in dir_contents
+        if item.is_dir() and dir_contains_index_md(item)
+    ]
+    return markdown_directories
 
 
 def add_markdown_extension(file_name: str) -> str:
