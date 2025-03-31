@@ -3,7 +3,7 @@ from pathlib import Path
 from textual.widget import Widget
 from textual.widgets import Checkbox, ListView, ListItem, Label, Button, Input
 from textual.screen import ModalScreen
-from textual.containers import Grid
+from textual.containers import Grid, Horizontal
 from textual.app import ComposeResult
 from textual.message import Message
 from textual import on
@@ -156,14 +156,15 @@ class TaskList(ListView):
         super().__init__(**kwargs)
 
     async def append_task(self, task: Task) -> None:
-        labels = [Label(task.name)]
+        labels = [Label(" "), Label(task.name)]
         n_subtasks = task.n_subtasks
         if n_subtasks > 0:
             labels.append(Label(f"({n_subtasks})", classes="task-info"))
+
         await self.append(
             TaskListItem(
                 task,
-                *labels,
+                Horizontal(*labels),
                 name=task.name,
                 classes="task",
             )
@@ -178,14 +179,14 @@ class TaskList(ListView):
         if highlighted is None:
             return
 
-        if not highlighted.task_instance.is_directory:
+        if not highlighted.task_instance._is_directory:
             self.app.notify(
                 "This task does not have any subtasks.", severity="warning"
             )
             return
 
         self.post_message(
-            self.SetDirectory(self, highlighted.task_instance.children_dir)
+            self.SetDirectory(self, highlighted.task_instance.path_to_children)
         )
 
     def action_open_parent(self) -> None:
@@ -200,9 +201,7 @@ class TaskList(ListView):
 
         def confirm_delete(delete: bool | None) -> None:
             if delete:
-                path_to_file = task.path
-                path_to_file.unlink()
-
+                task.delete()
                 # Since we deleted a file, we want the main app to reload and
                 # rerender the list of tasks that is shown to the user.
                 self.post_message(self.RerenderTaskList())

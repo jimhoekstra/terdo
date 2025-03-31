@@ -3,6 +3,12 @@
     scrollbar-background: $surface;
     border: tall transparent;
     background: $surface;
+    padding: 2 0;
+
+}
+
+Horizontal {
+    height: 1;
 }
 
 #note-viewer-container:focus {
@@ -36,7 +42,7 @@
 
 #main-container {
     grid-size: 3;
-    grid-gutter: 2;
+    grid-gutter: 1;
 }
 
 #note-content {
@@ -53,6 +59,7 @@ TaskList {
 
 #note-viewer {
     border: tall transparent;
+    padding: 0 5;
 }
 
 Note:focus > #note-viewer-container {

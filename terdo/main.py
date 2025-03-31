@@ -9,7 +9,7 @@ from textual import on
 from terdo.components.task_overview import TaskList, TaskOverview
 from terdo.components.note import Note
 from terdo.utils.io import get_root_markdown_dir
-from terdo.utils.tasks_io import load_tasks_in_dir
+from terdo.models.task import load_tasks_in_dir
 
 
 class Terdo(App):
@@ -71,7 +71,6 @@ class Terdo(App):
         """
         tasks = load_tasks_in_dir(markdown_dir)
         task_overview_component = self.query_one(TaskOverview)
-        print(f"Setting markdwon dir to {markdown_dir}")
         task_overview_component.markdown_dir = self.markdown_dir
         await task_overview_component.set_tasks(tasks)
 
@@ -95,7 +94,7 @@ class Terdo(App):
             return
 
         task = item.task_instance
-        note.content = task.path
+        note.task_item = task
 
     @on(TaskList.Selected)
     def item_selected(self, event: TaskList.Highlighted) -> None:
