@@ -12,7 +12,7 @@
     scrollbar-background: $background;
 }
 
-Horizontal {
+.task-description {
     height: 1;
 }
 

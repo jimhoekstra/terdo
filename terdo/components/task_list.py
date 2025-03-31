@@ -164,7 +164,7 @@ class TaskList(ListView):
         await self.append(
             TaskListItem(
                 task,
-                Horizontal(*labels),
+                Horizontal(*labels, classes="task-description"),
                 name=task.name,
                 classes="task",
             )
