@@ -1,10 +1,15 @@
-#note-viewer-container {
-    scrollbar-color: gray 20%;
-    scrollbar-background: $surface;
+#note-viewer-container, {
     border: tall transparent;
     background: $surface;
     padding: 2 0;
+    scrollbar-color: gray 20%;
+    scrollbar-background: $surface;
+}
 
+#task-list {
+    padding: 1 1 0 1;
+    scrollbar-color: gray 20%;
+    scrollbar-background: $background;
 }
 
 Horizontal {
