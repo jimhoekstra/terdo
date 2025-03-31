@@ -37,7 +37,6 @@ class Task(BaseModel):
 
     @model_validator(mode="after")
     def _validate_path(self) -> "Task":
-        
         self.name = self.name.removesuffix(".md")
 
         # Hypothesis: the task is a directory that contains subtasks
@@ -66,7 +65,7 @@ class Task(BaseModel):
             "File {name} in directory {dir} is not a valid task.",
             {"name": self.name, "dir": self.dir},
         )
-    
+
     @property
     def last_edited(self) -> datetime:
         """Returns the last edited time of the task."""
@@ -87,7 +86,7 @@ class Task(BaseModel):
                 "Cannot get parent directory of the root markdown directory."
             )
         return self.dir.parent
-    
+
     @property
     def path_to_children(self) -> Path:
         """Returns the path to the directory containing the subtasks."""
@@ -95,19 +94,19 @@ class Task(BaseModel):
             return self.dir / self.name
         else:
             raise ValueError("Task is not a directory.")
-    
+
     @property
     def children(self) -> list["Task"]:
         if self._is_directory:
             return load_tasks_in_dir(self.dir / self.name)
         else:
-            return []            
+            return []
 
     @property
     def n_subtasks(self) -> int:
         """Returns the number of subtasks in the task."""
         return len(self.children)
-    
+
     def write(self, content: str) -> None:
         """Writes the content to the task."""
         assert self._path_to_file is not None, "Path to file is not set."

@@ -45,8 +45,10 @@ class VimVerticalScroll(VerticalScroll):
 
 
 class Note(Widget):
-    task_item: reactive[Task] = reactive(Task(name="Test file", dir=get_root_markdown_dir()))
-    
+    task_item: reactive[Task] = reactive(
+        Task(name="Test file", dir=get_root_markdown_dir())
+    )
+
     can_focus = False
     can_focus_children = True
 
