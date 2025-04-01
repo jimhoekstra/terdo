@@ -160,17 +160,15 @@ class Task(BaseModel):
         """Creates a subtask in the task."""
         assert self._path_to_file is not None, "Path to file is not set."
         full_dir_path = self.dir / self.name
-        
+
         if not self._is_directory:
             full_dir_path = self.dir / self.name
             full_dir_path.mkdir()
-            self._path_to_file.rename(
-                full_dir_path / INDEX_FILE_NAME
-            )
-            
+            self._path_to_file.rename(full_dir_path / INDEX_FILE_NAME)
+
             self._is_directory = True
             self._path_to_file = full_dir_path / INDEX_FILE_NAME
-        
+
         create_new_markdown_file(
             full_dir_path,
             get_default_new_file_name(full_dir_path),
