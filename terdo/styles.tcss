@@ -20,6 +20,14 @@
     border: tall $primary;
 }
 
+.task-rename {
+    background: $surface;
+}
+
+ChangeNameInput {
+    padding: 0 3;
+}
+
 .task {
     width: 100%;
     background: $surface;
@@ -79,11 +87,6 @@ Note:focus > #note-viewer-container {
     border: tall transparent;
     background: gray 30%;
 }
-
-Input {
-    border: tall transparent;
-}
-
 
 .task.-highlight {
     border: tall gray 40%;

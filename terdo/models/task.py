@@ -116,3 +116,18 @@ class Task(BaseModel):
         """Deletes the task."""
         assert self._path_to_file is not None, "Path to file is not set."
         self._path_to_file.unlink()
+
+    def rename(self, new_name: str) -> None:
+        """Renames the task."""
+        assert self._path_to_file is not None, "Path to file is not set."
+        if self._is_directory:
+            full_dir_path = self.dir / self.name
+            full_dir_path.rename(self.dir / new_name).touch()
+            self._path_to_file = full_dir_path / INDEX_FILE_NAME
+
+        else:
+            new_path = self.dir / add_markdown_extension(new_name)
+            self._path_to_file.rename(new_path).touch()
+            self._path_to_file = new_path
+
+        self.name = new_name

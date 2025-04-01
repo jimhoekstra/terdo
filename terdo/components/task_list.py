@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from textual.widget import Widget
-from textual.widgets import Checkbox, ListView, ListItem, Label, Button, Input
+from textual.widgets import ListView, ListItem, Label, Button, Input
 from textual.screen import ModalScreen
 from textual.containers import Grid, Horizontal
 from textual.app import ComposeResult
@@ -13,12 +13,11 @@ from terdo.models.task import Task
 from terdo.utils.io import (
     create_new_markdown_file,
     get_default_new_file_name,
-    rename_markdown_file,
 )
 
 
 class ChangeNameInput(Input):
-    note_name: str
+    task_instance: Task
     BINDINGS = [
         ("escape", "cancel_change_name", "Cancel Renaming"),
     ]
@@ -27,11 +26,11 @@ class ChangeNameInput(Input):
         def __init__(
             self,
             sender: "ChangeNameInput",
-            note_name: str,
+            task_instance: Task,
             focus_list_view: bool,
         ) -> None:
             self.sender: "ChangeNameInput" = sender
-            self.note_name: str = note_name
+            self.task_instance: Task = task_instance
             self.focus_list_view: bool = focus_list_view
             super().__init__()
 
@@ -41,28 +40,34 @@ class ChangeNameInput(Input):
 
     class ConfirmChangeName(Message):
         def __init__(
-            self, sender: "ChangeNameInput", original_name: str, new_name: str
+            self,
+            sender: "ChangeNameInput",
         ) -> None:
             self.sender: "ChangeNameInput" = sender
-            self.original_name: str = original_name
-            self.new_name: str = new_name
             super().__init__()
 
-    def __init__(self, note_name: str, **kwargs) -> None:
-        self.note_name = note_name
-        super().__init__(**kwargs)
+        @property
+        def control(self) -> "ChangeNameInput":
+            return self.sender
+
+    def __init__(self, task_instance: Task, **kwargs) -> None:
+        self.task_instance = task_instance
+        super().__init__(value=task_instance.name, **kwargs)
 
     async def action_submit(self) -> None:
-        self.post_message(
-            self.ConfirmChangeName(self, self.note_name, self.value)
-        )
+        self.task_instance.rename(self.value)
+        self.post_message(self.ConfirmChangeName(self))
 
     def action_cancel_change_name(self) -> None:
-        self.post_message(self.ChangeNameCancelled(self, self.note_name, True))
+        self.post_message(
+            self.ChangeNameCancelled(self, self.task_instance, True)
+        )
 
     @on(Blur)
     def cancel_change_name(self) -> None:
-        self.post_message(self.ChangeNameCancelled(self, self.note_name, False))
+        self.post_message(
+            self.ChangeNameCancelled(self, self.task_instance, False)
+        )
 
 
 class DeleteTaskModal(ModalScreen[bool]):
@@ -155,19 +160,27 @@ class TaskList(ListView):
         self.markdown_dir = markdown_dir
         super().__init__(**kwargs)
 
-    async def append_task(self, task: Task) -> None:
+    @staticmethod
+    def _create_task_list_item_children(task: Task) -> Horizontal:
         labels = [Label(" "), Label(task.name)]
         n_subtasks = task.n_subtasks
         if n_subtasks > 0:
             labels.append(Label(f"({n_subtasks})", classes="task-info"))
 
+        return Horizontal(*labels, classes="task-description")
+
+    @classmethod
+    def _create_task_list_item(cls, task: Task) -> TaskListItem:
+        return TaskListItem(
+            task,
+            cls._create_task_list_item_children(task),
+            name=task.name,
+            classes="task",
+        )
+
+    async def append_task(self, task: Task) -> None:
         await self.append(
-            TaskListItem(
-                task,
-                Horizontal(*labels, classes="task-description"),
-                name=task.name,
-                classes="task",
-            )
+            self._create_task_list_item(task),
         )
 
     def set_index(self, index: int) -> "TaskList":
@@ -209,7 +222,7 @@ class TaskList(ListView):
         # Show the modal screen for confirming the delete action
         self.app.push_screen(
             DeleteTaskModal(task),
-            # callback function that handles the user's input in the modal
+            # callback function that handles the users input in the modal
             confirm_delete,
         )
 
@@ -233,14 +246,12 @@ class TaskList(ListView):
         if highlighted is None:
             return
 
-        task_name = highlighted.task_instance.name
-
+        task_instance = highlighted.task_instance
         highlighted.remove_children()
 
-        new_input_element = ChangeNameInput(
-            note_name=task_name, value=task_name
-        )
+        new_input_element = ChangeNameInput(task_instance=task_instance)
         highlighted.mount(new_input_element)
+        highlighted.remove_class("task").add_class("task-rename")
 
         new_input_element.focus()
 
@@ -250,10 +261,12 @@ class TaskList(ListView):
     ) -> None:
         input_element = event.sender
         list_item_element = input_element.query_ancestor(TaskListItem)
-        list_item_element.remove_children()
 
-        new_checkbox_element = Checkbox(event.note_name)
-        list_item_element.mount(new_checkbox_element)
+        list_item_element.remove_children()
+        list_item_element.mount(
+            self._create_task_list_item_children(event.task_instance)
+        )
+        list_item_element.add_class("task").remove_class("task-rename")
 
         if event.focus_list_view:
             list_view = list_item_element.query_ancestor(ListView)
@@ -263,14 +276,4 @@ class TaskList(ListView):
     def submit_rename_task(
         self, event: ChangeNameInput.ConfirmChangeName
     ) -> None:
-        input_element = event.sender
-        rename_markdown_file(event.original_name, event.new_name)
-
-        list_item_element = input_element.query_ancestor(TaskListItem)
-        list_item_element.set_task_name(event.new_name)
-        list_item_element.remove_children()
-
-        new_checkbox_element = Checkbox(event.new_name)
-        list_item_element.mount(new_checkbox_element)
-
         self.post_message(self.RerenderTaskList())
