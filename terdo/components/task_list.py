@@ -152,6 +152,7 @@ class TaskList(ListView):
         ("d", "delete_task", "Delete"),
         ("n", "new_task", "New Task"),
         ("r", "rename_task", "Rename Task"),
+        ("N", "new_subtask", "New Subtask"),
     ]
 
     markdown_dir: Path
@@ -277,3 +278,13 @@ class TaskList(ListView):
         self, event: ChangeNameInput.ConfirmChangeName
     ) -> None:
         self.post_message(self.RerenderTaskList())
+
+    def action_new_subtask(self) -> None:
+        highlighted = self.highlighted_child
+        if highlighted is None:
+            return
+
+        task = highlighted.task_instance
+
+        task.create_subtask()
+        self.post_message(self.SetDirectory(self, task.path_to_children))

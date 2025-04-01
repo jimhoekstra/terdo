@@ -70,6 +70,14 @@ class Terdo(App):
             Whether to focus the task list after loading the tasks.
         """
         tasks = load_tasks_in_dir(markdown_dir)
+        if len(tasks) == 0:
+            if markdown_dir == get_root_markdown_dir():
+                self.app.notify(
+                    "No tasks found in the root directory.", severity="warning"
+                )
+            else:
+                self.markdown_dir = markdown_dir.parent
+            return
         task_overview_component = self.query_one(TaskOverview)
         task_overview_component.markdown_dir = self.markdown_dir
         await task_overview_component.set_tasks(tasks)

@@ -6,6 +6,8 @@ from datetime import datetime
 from terdo.utils.io import (
     add_markdown_extension,
     get_root_markdown_dir,
+    create_new_markdown_file,
+    get_default_new_file_name,
 )
 
 
@@ -25,7 +27,8 @@ def load_tasks_in_dir(dir: Path) -> list["Task"]:
         except ValidationError:
             # Ignore files that are not tasks
             pass
-    return sorted(children, key=lambda x: x.last_edited, reverse=True)
+    children = sorted(children, key=lambda x: x.last_edited, reverse=True)
+    return children
 
 
 class Task(BaseModel):
@@ -49,9 +52,22 @@ class Task(BaseModel):
         ):
             self._is_directory = True
             self._path_to_file = full_dir_path / INDEX_FILE_NAME
-            return self
+
+            if self.n_subtasks == 0:
+                # If the directory is empty, turn the directory into a file
+                self._path_to_file.rename(
+                    self.dir / add_markdown_extension(self.name)
+                ).touch()
+                full_dir_path.rmdir()
+            else:
+                return self
 
         # Hypothesis: the task is a file
+        if add_markdown_extension(self.name) == INDEX_FILE_NAME:
+            raise PydanticCustomError(
+                "TaskInvalidName",
+                "Task name cannot be the same as the index file name.",
+            )
         full_file_path = self.dir / add_markdown_extension(self.name)
 
         if full_file_path.exists() and full_file_path.is_file():
@@ -70,6 +86,14 @@ class Task(BaseModel):
     def last_edited(self) -> datetime:
         """Returns the last edited time of the task."""
         assert self._path_to_file is not None, "Path to file is not set."
+
+        # If the task is a directory, recursively get the last modified time of the latest subtask
+        if self._is_directory:
+            subtasks = self.children
+            latest_modified_time = max(
+                subtask.last_edited for subtask in subtasks
+            )
+            return latest_modified_time
         return datetime.fromtimestamp(self._path_to_file.stat().st_mtime)
 
     @property
@@ -131,3 +155,23 @@ class Task(BaseModel):
             self._path_to_file = new_path
 
         self.name = new_name
+
+    def create_subtask(self) -> None:
+        """Creates a subtask in the task."""
+        assert self._path_to_file is not None, "Path to file is not set."
+        full_dir_path = self.dir / self.name
+        
+        if not self._is_directory:
+            full_dir_path = self.dir / self.name
+            full_dir_path.mkdir()
+            self._path_to_file.rename(
+                full_dir_path / INDEX_FILE_NAME
+            )
+            
+            self._is_directory = True
+            self._path_to_file = full_dir_path / INDEX_FILE_NAME
+        
+        create_new_markdown_file(
+            full_dir_path,
+            get_default_new_file_name(full_dir_path),
+        )
