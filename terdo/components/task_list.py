@@ -1,10 +1,9 @@
 from pathlib import Path
-from datetime import datetime
 
 from textual.widget import Widget
-from textual.widgets import Checkbox, ListView, ListItem, Label, Button, Input
+from textual.widgets import ListView, ListItem, Label, Button, Input
 from textual.screen import ModalScreen
-from textual.containers import Grid
+from textual.containers import Grid, Horizontal
 from textual.app import ComposeResult
 from textual.message import Message
 from textual import on
@@ -14,12 +13,11 @@ from terdo.models.task import Task
 from terdo.utils.io import (
     create_new_markdown_file,
     get_default_new_file_name,
-    rename_markdown_file,
 )
 
 
 class ChangeNameInput(Input):
-    note_name: str
+    task_instance: Task
     BINDINGS = [
         ("escape", "cancel_change_name", "Cancel Renaming"),
     ]
@@ -28,11 +26,11 @@ class ChangeNameInput(Input):
         def __init__(
             self,
             sender: "ChangeNameInput",
-            note_name: str,
+            task_instance: Task,
             focus_list_view: bool,
         ) -> None:
             self.sender: "ChangeNameInput" = sender
-            self.note_name: str = note_name
+            self.task_instance: Task = task_instance
             self.focus_list_view: bool = focus_list_view
             super().__init__()
 
@@ -42,28 +40,34 @@ class ChangeNameInput(Input):
 
     class ConfirmChangeName(Message):
         def __init__(
-            self, sender: "ChangeNameInput", original_name: str, new_name: str
+            self,
+            sender: "ChangeNameInput",
         ) -> None:
             self.sender: "ChangeNameInput" = sender
-            self.original_name: str = original_name
-            self.new_name: str = new_name
             super().__init__()
 
-    def __init__(self, note_name: str, **kwargs) -> None:
-        self.note_name = note_name
-        super().__init__(**kwargs)
+        @property
+        def control(self) -> "ChangeNameInput":
+            return self.sender
+
+    def __init__(self, task_instance: Task, **kwargs) -> None:
+        self.task_instance = task_instance
+        super().__init__(value=task_instance.name, **kwargs)
 
     async def action_submit(self) -> None:
-        self.post_message(
-            self.ConfirmChangeName(self, self.note_name, self.value)
-        )
+        self.task_instance.rename(self.value)
+        self.post_message(self.ConfirmChangeName(self))
 
     def action_cancel_change_name(self) -> None:
-        self.post_message(self.ChangeNameCancelled(self, self.note_name, True))
+        self.post_message(
+            self.ChangeNameCancelled(self, self.task_instance, True)
+        )
 
     @on(Blur)
     def cancel_change_name(self) -> None:
-        self.post_message(self.ChangeNameCancelled(self, self.note_name, False))
+        self.post_message(
+            self.ChangeNameCancelled(self, self.task_instance, False)
+        )
 
 
 class DeleteTaskModal(ModalScreen[bool]):
@@ -94,19 +98,36 @@ class DeleteTaskModal(ModalScreen[bool]):
 
 
 class TaskListItem(ListItem):
-    task_name: str
+    task_instance: Task
 
-    def __init__(self, task_name: str, *children: Widget, **kwargs) -> None:
-        self.task_name = task_name
+    def __init__(self, task: Task, *children: Widget, **kwargs) -> None:
+        self.task_instance = task
         super().__init__(*children, **kwargs)
 
+    def set_task(self, task: Task) -> "TaskListItem":
+        self.task_instance = task
+        return self
+
     def set_task_name(self, task_name: str) -> "TaskListItem":
-        self.task_name = task_name
+        self.task_instance.name = task_name
         return self
 
 
 class TaskList(ListView):
     class RerenderTaskList(Message):
+        pass
+
+    class SetDirectory(Message):
+        def __init__(self, sender: "TaskList", markdown_dir: Path) -> None:
+            self.sender: "TaskList" = sender
+            self.markdown_dir: Path = markdown_dir
+            super().__init__()
+
+        @property
+        def control(self) -> "TaskList":
+            return self.sender
+
+    class OpenParentDirectory(Message):
         pass
 
     # TODO: figure out how to properly handle this so that the type checker
@@ -117,9 +138,7 @@ class TaskList(ListView):
         ) -> None:
             super().__init__(list_view, item)
             self.list_view: "TaskList" = list_view  # type: ignore
-            """The view that contains the item highlighted."""
             self.item: TaskListItem | None = item  # type: ignore
-            """The highlighted item, if there is one highlighted."""
 
         @property
         def control(self) -> "TaskList":
@@ -128,9 +147,12 @@ class TaskList(ListView):
     BINDINGS = [
         ("j", "cursor_down", "Next"),
         ("k", "cursor_up", "Previous"),
+        ("l", "open_children", "Subtasks"),
+        ("h", "open_parent", "Parent"),
         ("d", "delete_task", "Delete"),
         ("n", "new_task", "New Task"),
         ("r", "rename_task", "Rename Task"),
+        ("N", "new_subtask", "New Subtask"),
     ]
 
     markdown_dir: Path
@@ -139,37 +161,69 @@ class TaskList(ListView):
         self.markdown_dir = markdown_dir
         super().__init__(**kwargs)
 
+    @staticmethod
+    def _create_task_list_item_children(task: Task) -> Horizontal:
+        labels = [Label(" "), Label(task.name)]
+        n_subtasks = task.n_subtasks
+        if n_subtasks > 0:
+            labels.append(Label(f"({n_subtasks})", classes="task-info"))
+
+        return Horizontal(*labels, classes="task-description")
+
+    @classmethod
+    def _create_task_list_item(cls, task: Task) -> TaskListItem:
+        return TaskListItem(
+            task,
+            cls._create_task_list_item_children(task),
+            name=task.name,
+            classes="task",
+        )
+
     async def append_task(self, task: Task) -> None:
         await self.append(
-            TaskListItem(task.name, Checkbox(task.name), name=task.name)
+            self._create_task_list_item(task),
         )
 
     def set_index(self, index: int) -> "TaskList":
         self.index = index
         return self
 
+    def action_open_children(self) -> None:
+        highlighted = self.highlighted_child
+        if highlighted is None:
+            return
+
+        if not highlighted.task_instance._is_directory:
+            self.app.notify(
+                "This task does not have any subtasks.", severity="warning"
+            )
+            return
+
+        self.post_message(
+            self.SetDirectory(self, highlighted.task_instance.path_to_children)
+        )
+
+    def action_open_parent(self) -> None:
+        self.post_message(self.OpenParentDirectory())
+
     def action_delete_task(self) -> None:
         highlighted = self.highlighted_child
         if highlighted is None:
             return
 
-        task_name = highlighted.name
-        if task_name is None:
-            return
+        task = highlighted.task_instance
 
         def confirm_delete(delete: bool | None) -> None:
             if delete:
-                path_to_file = Path.cwd() / "markdown" / f"{task_name}.md"
-                path_to_file.unlink()
-
+                task.delete()
                 # Since we deleted a file, we want the main app to reload and
                 # rerender the list of tasks that is shown to the user.
                 self.post_message(self.RerenderTaskList())
 
         # Show the modal screen for confirming the delete action
         self.app.push_screen(
-            DeleteTaskModal(Task(name=task_name, last_edited=datetime.now())),
-            # callback function that handles the user's input in the modal
+            DeleteTaskModal(task),
+            # callback function that handles the users input in the modal
             confirm_delete,
         )
 
@@ -193,14 +247,12 @@ class TaskList(ListView):
         if highlighted is None:
             return
 
-        name = highlighted.task_name
-        if name is None:
-            return
-
+        task_instance = highlighted.task_instance
         highlighted.remove_children()
 
-        new_input_element = ChangeNameInput(note_name=name, value=name)
+        new_input_element = ChangeNameInput(task_instance=task_instance)
         highlighted.mount(new_input_element)
+        highlighted.remove_class("task").add_class("task-rename")
 
         new_input_element.focus()
 
@@ -210,10 +262,12 @@ class TaskList(ListView):
     ) -> None:
         input_element = event.sender
         list_item_element = input_element.query_ancestor(TaskListItem)
-        list_item_element.remove_children()
 
-        new_checkbox_element = Checkbox(event.note_name)
-        list_item_element.mount(new_checkbox_element)
+        list_item_element.remove_children()
+        list_item_element.mount(
+            self._create_task_list_item_children(event.task_instance)
+        )
+        list_item_element.add_class("task").remove_class("task-rename")
 
         if event.focus_list_view:
             list_view = list_item_element.query_ancestor(ListView)
@@ -223,14 +277,14 @@ class TaskList(ListView):
     def submit_rename_task(
         self, event: ChangeNameInput.ConfirmChangeName
     ) -> None:
-        input_element = event.sender
-        rename_markdown_file(event.original_name, event.new_name)
-
-        list_item_element = input_element.query_ancestor(TaskListItem)
-        list_item_element.set_task_name(event.new_name)
-        list_item_element.remove_children()
-
-        new_checkbox_element = Checkbox(event.new_name)
-        list_item_element.mount(new_checkbox_element)
-
         self.post_message(self.RerenderTaskList())
+
+    def action_new_subtask(self) -> None:
+        highlighted = self.highlighted_child
+        if highlighted is None:
+            return
+
+        task = highlighted.task_instance
+
+        task.create_subtask()
+        self.post_message(self.SetDirectory(self, task.path_to_children))

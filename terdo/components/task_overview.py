@@ -13,7 +13,7 @@ from terdo.components.task_list import TaskList
 
 class TaskOverview(Widget):
     all_tasks: list[Task] = []
-    markdown_dir: reactive[Path]
+    markdown_dir: reactive[Path] = reactive(Path.cwd() / "markdown")
 
     BINDINGS = [
         ("s", "search_tasks", "Search Tasks"),
@@ -21,8 +21,8 @@ class TaskOverview(Widget):
     ]
 
     def __init__(self, markdown_dir: Path, **kwargs) -> None:
-        self.markdown_dir = markdown_dir
         super().__init__(**kwargs)
+        self.markdown_dir = markdown_dir
 
     def compose(self) -> ComposeResult:
         yield Search(

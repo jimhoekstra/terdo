@@ -1,16 +1,43 @@
-#note-viewer-container {
+#note-viewer-container, {
+    border: tall transparent;
+    background: $surface;
+    padding: 2 0;
     scrollbar-color: gray 20%;
     scrollbar-background: $surface;
-    border: tall $surface;
-    background: $surface;
+}
+
+#task-list {
+    padding: 1 1 0 1;
+    scrollbar-color: gray 20%;
+    scrollbar-background: $background;
+}
+
+.task-description {
+    height: 1;
 }
 
 #note-viewer-container:focus {
     border: tall $primary;
 }
 
-Checkbox {
+.task-rename {
+    background: $surface;
+}
+
+ChangeNameInput {
+    padding: 0 3;
+}
+
+.task {
     width: 100%;
+    background: $surface;
+    padding: 0 2;
+    border: tall transparent;
+}
+
+.task-info {
+    dock: right;
+    color: yellow;
 }
 
 #path-label {
@@ -28,7 +55,7 @@ Checkbox {
 
 #main-container {
     grid-size: 3;
-    grid-gutter: 2;
+    grid-gutter: 1;
 }
 
 #note-content {
@@ -45,6 +72,7 @@ TaskList {
 
 #note-viewer {
     border: tall transparent;
+    padding: 0 5;
 }
 
 Note:focus > #note-viewer-container {
@@ -60,23 +88,11 @@ Note:focus > #note-viewer-container {
     background: gray 30%;
 }
 
-Input {
-    border: tall transparent;
-}
-
-ListItem > Checkbox {
-    border: tall transparent;
-}
-
-ListItem.-highlight {
-    background: transparent;
-}
-
-ListItem.-highlight > Checkbox {
+.task.-highlight {
     border: tall gray 40%;
 }
 
-TaskList:focus > ListItem.-highlight > Checkbox {
+TaskList:focus > .task.-highlight {
     border: tall $primary;
 }
 
