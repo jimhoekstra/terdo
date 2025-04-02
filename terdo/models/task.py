@@ -155,21 +155,51 @@ class Task(BaseModel):
             self._path_to_file = new_path
 
         self.name = new_name
+    
+    def move_to_dir(self, dir: Path) -> None:
+        if self._is_directory:
+            full_dir_path = self.dir / self.name
+            full_dir_path.rename(dir / self.name)
+            self.dir = dir
 
-    def create_subtask(self) -> None:
-        """Creates a subtask in the task."""
+            self._path_to_file = self.dir / self.name / INDEX_FILE_NAME
+            self._path_to_file.touch()
+        else:
+            assert self._path_to_file is not None, "Path to file is not set."
+            new_path = dir / add_markdown_extension(self.name)
+            self._path_to_file.rename(new_path).touch()
+            self._path_to_file = new_path
+            self.dir = dir
+
+    def _change_into_dir(self) -> None:
         assert self._path_to_file is not None, "Path to file is not set."
         full_dir_path = self.dir / self.name
 
         if not self._is_directory:
-            full_dir_path = self.dir / self.name
             full_dir_path.mkdir()
             self._path_to_file.rename(full_dir_path / INDEX_FILE_NAME)
 
             self._is_directory = True
             self._path_to_file = full_dir_path / INDEX_FILE_NAME
 
+    def create_subtask(self) -> None:
+        """Creates a subtask in the task."""
+        assert self._path_to_file is not None, "Path to file is not set."
+        full_dir_path = self.dir / self.name
+
+        self._change_into_dir()
+
         create_new_markdown_file(
             full_dir_path,
             get_default_new_file_name(full_dir_path),
         )
+
+    def add_task_as_subtask(self, task: "Task") -> None:
+        """Adds a task as a subtask of the current task."""
+        assert self._path_to_file is not None, "Path to file is not set."
+        full_dir_path = self.dir / self.name
+
+        self._change_into_dir()
+
+        # Move the task to the subtask directory
+        task.move_to_dir(full_dir_path)

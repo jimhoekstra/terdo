@@ -13,6 +13,7 @@ from terdo.models.task import Task
 from terdo.utils.io import (
     create_new_markdown_file,
     get_default_new_file_name,
+    get_root_markdown_dir,
 )
 
 
@@ -153,12 +154,18 @@ class TaskList(ListView):
         ("n", "new_task", "New Task"),
         ("r", "rename_task", "Rename Task"),
         ("N", "new_subtask", "New Subtask"),
+        ("m", "move_task", "Move Task"),
+        ("M", "move_task_to", "Move Into"),
+        ("P", "move_task_to_parent", "Move To Parent"),
+        ("c", "cancel_action", "Cancel Action"),
     ]
 
     markdown_dir: Path
+    task_to_move: Task | None
 
     def __init__(self, markdown_dir: Path, **kwargs) -> None:
         self.markdown_dir = markdown_dir
+        self.task_to_move = None
         super().__init__(**kwargs)
 
     @staticmethod
@@ -170,13 +177,16 @@ class TaskList(ListView):
 
         return Horizontal(*labels, classes="task-description")
 
-    @classmethod
-    def _create_task_list_item(cls, task: Task) -> TaskListItem:
+    def _create_task_list_item(self, task: Task) -> TaskListItem:
+        additional_classes = ""
+        if self.task_to_move == task:
+            additional_classes += " task-to-move"
+
         return TaskListItem(
             task,
-            cls._create_task_list_item_children(task),
+            self._create_task_list_item_children(task),
             name=task.name,
-            classes="task",
+            classes="task" + additional_classes,
         )
 
     async def append_task(self, task: Task) -> None:
@@ -288,3 +298,72 @@ class TaskList(ListView):
 
         task.create_subtask()
         self.post_message(self.SetDirectory(self, task.path_to_children))
+
+    def action_move_task(self) -> None:
+        highlighted = self.highlighted_child
+        if highlighted is None:
+            return
+        
+        highlighted.add_class("task-to-move")
+
+        task = highlighted.task_instance
+        self.task_to_move = task
+        self.app.notify(
+            task.name,
+            title="Selected for moving:",
+        )
+
+    def action_move_task_to(self) -> None:
+        highlighted = self.highlighted_child
+        if highlighted is None:
+            return
+
+        if self.task_to_move is None:
+            self.app.notify(
+                "No task selected for moving.",
+                severity="warning",
+            )
+            return
+
+        target_task = highlighted.task_instance
+        target_task.add_task_as_subtask(self.task_to_move)
+        self.post_message(self.SetDirectory(self, target_task.path_to_children))
+        self.task_to_move = None
+
+    def action_move_task_to_parent(self):
+        highlighted = self.highlighted_child
+        if highlighted is None:
+            return
+
+        if self.task_to_move is None:
+            self.app.notify(
+                "No task selected for moving.",
+                severity="warning",
+            )
+            return
+
+        if self.task_to_move.dir == get_root_markdown_dir():
+            self.app.notify(
+                "Cannot move to parent directory of the root markdown directory.",
+                severity="warning",
+            )
+            return
+        
+        self.task_to_move.move_to_dir(self.task_to_move.path_to_parent)
+        self.post_message(self.SetDirectory(self, self.task_to_move.dir))
+        self.task_to_move = None
+
+    def action_cancel_action(self) -> None:
+        task_to_move = self.task_to_move
+        if task_to_move is not None:
+            self.task_to_move = None
+            self.post_message(self.RerenderTaskList())
+            self.notify(
+                task_to_move.name,
+                title="Cancelled moving task.",
+            )
+        else:
+            self.app.notify(
+                "No action currently enabled.",
+                severity="warning",
+            )

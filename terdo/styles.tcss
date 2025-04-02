@@ -96,6 +96,14 @@ TaskList:focus > .task.-highlight {
     border: tall $primary;
 }
 
+.task.task-to-move {
+    border: tall green;
+}
+
+TaskList:focus > .task.task-to-move {
+    border: tall green;
+}
+
 DeleteTaskModal {
     align: center middle;
 }
