@@ -3,7 +3,6 @@ from pathlib import Path
 from textual.app import App, ComposeResult
 from textual.widgets import Footer
 from textual.containers import VerticalScroll, Grid
-from textual.reactive import reactive
 from textual import on
 
 from terdo.components.task_overview import TaskList, TaskOverview
@@ -24,7 +23,7 @@ class Terdo(App):
     ]
 
     CSS_PATH = "styles.tcss"
-    markdown_dir: reactive[Path] = reactive(get_root_markdown_dir())
+    markdown_dir: Path = get_root_markdown_dir()
 
     def compose(self) -> ComposeResult:
         """Compose the main UI layout.
@@ -53,12 +52,11 @@ class Terdo(App):
         """Sets up the app when the app is mounted."""
         await self.set_directory(self.markdown_dir)
 
-    async def watch_markdown_dir(self) -> None:
-        """Sets the directory shown in the app to the given directory when it changes."""
-        await self.set_directory(self.markdown_dir)
-
     async def set_directory(
-        self, markdown_dir: Path, focus_task_list: bool = True
+        self,
+        markdown_dir: Path,
+        focus_task_list: bool = True,
+        rename_first_task: bool = False,
     ) -> None:
         """Sets the directory shown in the app to the given directory.
 
@@ -76,8 +74,17 @@ class Terdo(App):
                     "No tasks found in the root directory.", severity="warning"
                 )
             else:
+                self.app.notify(
+                    "No tasks found in current directory. Moving to parent.",
+                    severity="warning",
+                )
                 self.markdown_dir = markdown_dir.parent
-            return
+                await self.set_directory(
+                    self.markdown_dir,
+                    focus_task_list=focus_task_list,
+                    rename_first_task=rename_first_task,
+                )
+                return
         task_overview_component = self.query_one(TaskOverview)
         task_overview_component.markdown_dir = self.markdown_dir
         await task_overview_component.set_tasks(tasks)
@@ -85,6 +92,8 @@ class Terdo(App):
         if focus_task_list:
             task_list_component = task_overview_component.query_one(TaskList)
             task_list_component.focus()
+            if rename_first_task:
+                task_list_component.action_rename_task()
 
     @on(TaskList.Highlighted)
     def load_note(self, event: TaskList.Highlighted) -> None:
@@ -98,7 +107,8 @@ class Terdo(App):
         note = self.query_one("#note-content", Note)
 
         item = event.item
-        if item is None:
+        if item is None or len(event.list_view.children) == 0:
+            note.task_item = None
             return
 
         task = item.task_instance
@@ -111,15 +121,19 @@ class Terdo(App):
         note.focus()
 
     @on(TaskList.RerenderTaskList)
-    async def rerender_from_task_list(self):
+    async def rerender_from_task_list(
+        self, event: TaskList.RerenderTaskList
+    ) -> None:
         """Reloads the task list when a task is added or removed."""
-        # TODO: resolve duplication with rerender_from_note
-        await self.set_directory(self.markdown_dir)
+        await self.set_directory(
+            self.markdown_dir,
+            focus_task_list=True,
+            rename_first_task=event.rename_first_item,
+        )
 
     @on(Note.RerenderTaskList)
     async def rerender_from_note(self):
         """Reloads the task list when the note is saved."""
-        # TODO: resolve duplication with rerender_from_task_list
         await self.set_directory(self.markdown_dir)
 
     @on(TaskList.SetDirectory)
@@ -127,6 +141,11 @@ class Terdo(App):
         self, event: TaskList.SetDirectory
     ) -> None:
         self.markdown_dir = event.markdown_dir
+        await self.set_directory(
+            event.markdown_dir,
+            focus_task_list=True,
+            rename_first_task=event.rename_first_item,
+        )
 
     @on(TaskList.OpenParentDirectory)
     async def open_parent_directory(self) -> None:
@@ -139,6 +158,7 @@ class Terdo(App):
 
         new_dir = self.markdown_dir.parent
         self.markdown_dir = new_dir
+        await self.set_directory(new_dir)
 
     async def action_quit(self) -> None:
         """Exits the program by calling the exit method."""

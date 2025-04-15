@@ -116,12 +116,27 @@ class TaskListItem(ListItem):
 
 class TaskList(ListView):
     class RerenderTaskList(Message):
-        pass
+        def __init__(
+            self, sender: "TaskList", rename_first_item: bool = False
+        ) -> None:
+            self.sender: "TaskList" = sender
+            self.rename_first_item: bool = rename_first_item
+            super().__init__()
+
+        @property
+        def control(self) -> "TaskList":
+            return self.sender
 
     class SetDirectory(Message):
-        def __init__(self, sender: "TaskList", markdown_dir: Path) -> None:
+        def __init__(
+            self,
+            sender: "TaskList",
+            markdown_dir: Path,
+            rename_first_item: bool = False,
+        ) -> None:
             self.sender: "TaskList" = sender
             self.markdown_dir: Path = markdown_dir
+            self.rename_first_item: bool = rename_first_item
             super().__init__()
 
         @property
@@ -228,7 +243,7 @@ class TaskList(ListView):
                 task.delete()
                 # Since we deleted a file, we want the main app to reload and
                 # rerender the list of tasks that is shown to the user.
-                self.post_message(self.RerenderTaskList())
+                self.post_message(self.RerenderTaskList(self))
 
         # Show the modal screen for confirming the delete action
         self.app.push_screen(
@@ -250,7 +265,7 @@ class TaskList(ListView):
     def action_new_task(self) -> None:
         new_file_name = get_default_new_file_name(self.markdown_dir)
         create_new_markdown_file(self.markdown_dir, new_file_name)
-        self.post_message(self.RerenderTaskList())
+        self.post_message(self.RerenderTaskList(self, rename_first_item=True))
 
     def action_rename_task(self) -> None:
         highlighted = self.highlighted_child
@@ -287,7 +302,7 @@ class TaskList(ListView):
     def submit_rename_task(
         self, event: ChangeNameInput.ConfirmChangeName
     ) -> None:
-        self.post_message(self.RerenderTaskList())
+        self.post_message(self.RerenderTaskList(self))
 
     def action_new_subtask(self) -> None:
         highlighted = self.highlighted_child
@@ -297,13 +312,17 @@ class TaskList(ListView):
         task = highlighted.task_instance
 
         task.create_subtask()
-        self.post_message(self.SetDirectory(self, task.path_to_children))
+        self.post_message(
+            self.SetDirectory(
+                self, task.path_to_children, rename_first_item=True
+            )
+        )
 
     def action_move_task(self) -> None:
         highlighted = self.highlighted_child
         if highlighted is None:
             return
-        
+
         highlighted.add_class("task-to-move")
 
         task = highlighted.task_instance
@@ -348,7 +367,7 @@ class TaskList(ListView):
                 severity="warning",
             )
             return
-        
+
         self.task_to_move.move_to_dir(self.task_to_move.path_to_parent)
         self.post_message(self.SetDirectory(self, self.task_to_move.dir))
         self.task_to_move = None
@@ -357,7 +376,7 @@ class TaskList(ListView):
         task_to_move = self.task_to_move
         if task_to_move is not None:
             self.task_to_move = None
-            self.post_message(self.RerenderTaskList())
+            self.post_message(self.RerenderTaskList(self))
             self.notify(
                 task_to_move.name,
                 title="Cancelled moving task.",

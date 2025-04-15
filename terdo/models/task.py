@@ -75,7 +75,7 @@ class Task(BaseModel):
             self._path_to_file = full_file_path
             return self
 
-        # If neither hypothesis is true, raise an error
+        # If none of the above cases is true, raise an error
         raise PydanticCustomError(
             "TaskDoesNotExist",
             "File {name} in directory {dir} is not a valid task.",
@@ -155,7 +155,7 @@ class Task(BaseModel):
             self._path_to_file = new_path
 
         self.name = new_name
-    
+
     def move_to_dir(self, dir: Path) -> None:
         if self._is_directory:
             full_dir_path = self.dir / self.name

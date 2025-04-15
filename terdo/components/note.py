@@ -6,7 +6,6 @@ from textual.reactive import reactive
 from textual.message import Message
 from textual import on
 from terdo.models.task import Task
-from terdo.utils.io import get_root_markdown_dir
 
 
 class NoteEditor(TextArea):
@@ -45,9 +44,7 @@ class VimVerticalScroll(VerticalScroll):
 
 
 class Note(Widget):
-    task_item: reactive[Task] = reactive(
-        Task(name="Test file", dir=get_root_markdown_dir())
-    )
+    task_item: reactive[Task | None] = reactive(None)
 
     can_focus = False
     can_focus_children = True
@@ -80,9 +77,18 @@ class Note(Widget):
 
     async def reload_content(self) -> None:
         markdown_element = self.query_one("#note-viewer", Markdown)
-        await markdown_element.update(self.task_item.content)
+        if self.task_item is None:
+            await markdown_element.update("# No notes found.")
+        else:
+            await markdown_element.update(self.task_item.content)
 
     async def action_edit(self) -> None:
+        if self.task_item is None:
+            self.app.notify(
+                "Can't edit because no note is selected", severity="warning"
+            )
+            return
+
         # Hide the markdown element
         markdown_element = self.query_one(
             "#note-viewer-container", VimVerticalScroll
@@ -115,7 +121,12 @@ class Note(Widget):
     @on(NoteEditor.Save, "#note-editor")
     async def save(self, event: NoteEditor.Save) -> None:
         textarea_element = self.query_one("#note-editor", TextArea)
-        self.task_item.write(textarea_element.text.strip())
+        if self.task_item is None:
+            self.app.notify(
+                "Can't save because no note is selected.", severity="warning"
+            )
+
+        self.task_item.write(textarea_element.text.strip())  # type: ignore
 
         if not event.close_editor:
             # When only saving but not closing the editor, we want to
